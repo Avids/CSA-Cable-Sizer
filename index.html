@@ -115,17 +115,6 @@
             <label>Project Name</label>
             <input type="text" id="project_name" name="project_name" placeholder="e.g., Building A Service Upgrade">
           </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label>From</label>
-              <input type="text" id="system_from" name="system_from" placeholder="e.g., Main Switchboard">
-            </div>
-            <div class="form-group">
-              <label>To</label>
-              <input type="text" id="system_to" name="system_to" placeholder="e.g., MCC-1">
-            </div>
-          </div>
         </fieldset>
       </div>
 
@@ -178,8 +167,8 @@
           <div class="form-group">
             <label>Installation Category <span class="required">*</span></label>
             <select id="installation_type" name="installation_type" required>
-              <option value="cable">Cable</option>
-              <option value="raceway" selected>Single Conductors in Raceway</option>
+              <option value="cable" selected>Cable</option>
+              <option value="raceway">Single Conductors in Raceway</option>
               <option value="free_air">Free Air</option>
             </select>
             <div class="field-hint">
@@ -292,7 +281,7 @@
       <div class="form-actions">
         <button type="button" id="btn-calculate" class="btn-primary">Calculate</button>
         <button type="button" id="btn-export-pdf" class="btn-secondary">Export to PDF</button>
-        <button type="button" id="btn-export-json" class="btn-secondary">Save as JSON</button>
+        <button type="button" id="btn-export-json" class="btn-secondary">Save</button>
         <button type="reset" class="btn-tertiary">Clear Form</button>
       </div>
     </form>
