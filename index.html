@@ -672,7 +672,7 @@
     <tr><th>Circuit</th><td>${this.form.circuit.type === "three_phase" ? "Three phase" : "Single phase"}</td><th>Source Voltage</th><td>${this.form.circuit.voltage_v} V</td></tr>
     <tr><th>Load Current</th><td>${this.form.circuit.current_a} A</td><th>Run Length</th><td>${this.form.circuit.run_length_m} ${this.form.circuit.run_length_unit} (${runLengthM.toFixed(2)} m)</td></tr>
     <tr><th>Max Voltage Drop</th><td>${this.form.circuit.max_voltage_drop_pct}%</td><th>Power Factor</th><td>${this.form.circuit.power_factor}</td></tr>
-    <tr><th>Conductor</th><td>${this.form.conductors.material}, ${this.form.conductors.quantity} conductors, ${this.form.conductors.parallel_sets} parallel set(s)</td><th>Insulation</th><td>${this.form.conductors.insulation_rating_c}°C</td></tr>
+    <tr><th>Conductor</th><td>${this.form.conductors.material}, ${this.form.conductors.quantity} conductors, ${this.form.conductors.parallel_sets} parallel set(s)</td><th>Conductor Insulation Rating</th><td>${this.form.conductors.insulation_rating_c}°C</td></tr>
     <tr><th>Ambient</th><td>${this.form.system.ambient_temp_c}°${this.form.system.ambient_temp_unit.toUpperCase()}</td><th>Installation</th><td>${this.form.installation.type} (${this.formatInstallationDetails()})</td></tr>
     <tr><th>From</th><td>${this.form.system.from || "N/A"}</td><th>To</th><td>${this.form.system.to || "N/A"}</td></tr>
   </table>
@@ -680,12 +680,12 @@
   <h2>2) Wire Size & Ampacity Calculation</h2>
   <table>
     <tr><th>CSA Ampacity Table</th><td>${this.results.csa_table_ref}</td></tr>
-    <tr><th>Selected Ampacity Column</th><td>${this.form.code_basis.ampacity_col_c}°C column</td></tr>
+    <tr><th>Termination temperature Basis</th><td>${this.form.code_basis.ampacity_col_c}°C column</td></tr>
     <tr><th>Base Ampacity</th><td>${this.results.ampacity_base.toFixed(1)} A</td></tr>
     <tr><th>Temperature Correction (Table 5A)</th><td>${this.results.correction_factor.toFixed(3)}</td></tr>
     <tr><th>Available Ampacity</th><td>${this.results.ampacity_available_a.toFixed(1)} A total (${this.results.ampacity_available_per_set_a.toFixed(1)} A per set × ${this.results.parallel_sets})</td></tr>
     <tr><th>Ampacity Margin</th><td>${ampacityMargin.toFixed(1)} A</td></tr>
-    <tr><th>Minimum Size</th><td>${this.results.recommended_size_display}</td></tr>
+    <tr><th>Selected Size</th><td><strong>${this.results.recommended_size_display}</strong></td></tr>
   </table>
 
   <h2>3) Voltage Drop Calculation</h2>
