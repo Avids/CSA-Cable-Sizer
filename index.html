@@ -508,53 +508,15 @@
           </div>
 
           <div class="form-group">
-            <label>Load Type</label>
-            <select id="load_type" name="load_type">
-              <option value="inductive" selected>Inductive (motors, ballasts)</option>
-              <option value="resistive">Resistive (heaters, lights)</option>
-              <option value="mixed">Mixed</option>
+            <label>Installation Category <span class="required">*</span></label>
+            <select id="installation_type" name="installation_type" required>
+              <option value="cable" selected>Cable Assembly</option>
+              <option value="raceway">Single Conductors in Raceway</option>
+              <option value="free_air">Free Air / Overhead</option>
             </select>
-            <div class="field-hint">Informs power factor selection and derating decisions.</div>
-          </div>
-        </fieldset>
-
-        <!-- RIGHT COLUMN: INSTALLATION CATEGORY (Primary Control) -->
-        <fieldset id="installation-category-fieldset" class="form-full-width">
-          <legend>Installation Category <span class="required">*</span></legend>
-          <p class="fieldset-help">
-            How are the conductors installed? This determines which CSA ampacity table is used and affects voltage drop calculations.
-          </p>
-
-          <div class="radio-group">
-            <label>
-              <input type="radio" name="installation_type" value="cable" checked required>
-              <div class="option-content">
-                <span class="option-title">Cable Assembly</span>
-                <span class="option-desc">
-                  TECK, ACWU, NMD, or direct burial cable. Multi-conductor assembly rated as a unit.
-                </span>
-              </div>
-            </label>
-
-            <label>
-              <input type="radio" name="installation_type" value="raceway" required>
-              <div class="option-content">
-                <span class="option-title">Single Conductors in Raceway</span>
-                <span class="option-desc">
-                  Individual RW90, XHHW-2, or similar conductors installed in steel, aluminum, or PVC conduit.
-                </span>
-              </div>
-            </label>
-
-            <label>
-              <input type="radio" name="installation_type" value="free_air" required>
-              <div class="option-content">
-                <span class="option-title">Free Air / Overhead</span>
-                <span class="option-desc">
-                  Single or grouped conductors in free air, on surface of masonry, or on outdoor structures.
-                </span>
-              </div>
-            </label>
+            <div class="field-hint">
+              Determines which CSA ampacity table is used and affects voltage drop calculations.
+            </div>
           </div>
         </fieldset>
       </div>
@@ -684,8 +646,12 @@
 
           <div class="form-group">
             <label>Ampacity Column</label>
-            <input type="text" id="ampacity_col" name="ampacity_col" readonly disabled placeholder="e.g., 90°C">
-            <div class="field-hint">Based on insulation rating.</div>
+            <select id="ampacity_col" name="ampacity_col">
+              <option value="90" selected>90°C</option>
+              <option value="75">75°C</option>
+              <option value="60">60°C</option>
+            </select>
+            <div class="field-hint">Select the CSA ampacity column used for conductor ampacity lookup.</div>
           </div>
 
           <div class="form-group">
@@ -760,6 +726,7 @@
           },
           code_basis: {
             csa_standard: "C22.1:24",
+            ampacity_col_c: 90,
             special_notes: "",
             calculation_notes: ""
           }
@@ -768,11 +735,9 @@
 
       setupEventListeners() {
         // Installation type change: show/hide conditional fields
-        document.querySelectorAll('input[name="installation_type"]').forEach(radio => {
-          radio.addEventListener("change", (e) => {
-            this.form.installation.type = e.target.value;
-            this.updateFieldVisibility();
-          });
+        document.getElementById("installation_type").addEventListener("change", (e) => {
+          this.form.installation.type = e.target.value;
+          this.updateFieldVisibility();
         });
 
         // Update form on any input change
@@ -815,11 +780,13 @@
           "num_conductors": ["conductors", "quantity"],
           "insulation_rating_c": ["conductors", "insulation_rating_c"],
           "num_parallels": ["conductors", "parallel_sets"],
+          "installation_type": ["installation", "type"],
           "cable_type": ["installation", "cable", "cable_type"],
           "raceway_type": ["installation", "raceway", "raceway_type"],
           "conductors_in_run": ["installation", "raceway", "conductors_in_run"],
           "free_air_mounting": ["installation", "free_air", "mounting"],
           "surface_contact": ["installation", "free_air", "surface_contact"],
+          "ampacity_col": ["code_basis", "ampacity_col_c"],
           "special_notes": ["code_basis", "special_notes"],
           "calculation_notes": ["code_basis", "calculation_notes"]
         };
@@ -867,9 +834,6 @@
         }
 
         document.getElementById("csa_table_ref").value = tableRef;
-
-        const insulationLabel = `${this.form.conductors.insulation_rating_c}°C`;
-        document.getElementById("ampacity_col").value = insulationLabel;
       }
 
       validate() {
@@ -903,6 +867,18 @@
 
       calculate() {
         console.log("Calculate called with form data:", this.form);
+        const selectedAmpacityColumn = this.form.code_basis.ampacity_col_c;
+        const ampacityBase = getAmpacityFromTable(
+          "000",
+          this.form.conductors.material,
+          this.form.installation.type,
+          selectedAmpacityColumn
+        ) || 0;
+        const correctionFactor = getCorrectionFactorFromTable(
+          this.form.system.ambient_temp_c,
+          selectedAmpacityColumn
+        );
+        const ampacityAvailable = ampacityBase * correctionFactor;
 
         // TODO: Implement full calculation logic:
         // 1. Get correction factor from Table 5A
@@ -919,9 +895,9 @@
         this.results = {
           csa_table_ref: document.getElementById("csa_table_ref").value,
           recommended_size_awg: "3/0 AWG",
-          ampacity_base: 310,
-          correction_factor: 0.96,
-          ampacity_available_a: 297.6,
+          ampacity_base: ampacityBase,
+          correction_factor: correctionFactor,
+          ampacity_available_a: ampacityAvailable,
           voltage_drop_k_value: 0.267,
           voltage_drop_v: 16.0,
           voltage_drop_pct: 2.7,
@@ -941,7 +917,7 @@
           </div>
           <div class="result-row">
             <div class="result-label">Available Ampacity</div>
-            <div class="result-value">${this.results.ampacity_available_a.toFixed(1)} A (at ${this.form.conductors.insulation_rating_c}°C)</div>
+            <div class="result-value">${this.results.ampacity_available_a.toFixed(1)} A (at ${this.form.code_basis.ampacity_col_c}°C column)</div>
           </div>
           <div class="result-row">
             <div class="result-label">Load Current</div>
