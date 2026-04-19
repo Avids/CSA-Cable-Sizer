@@ -24,11 +24,8 @@
             <label>Circuit Configuration <span class="required">*</span></label>
             <select id="circuit_type" name="circuit_type" required>
               <option value="">— Select —</option>
-              <option value="1ph_2w_ln">1φ 2-wire (line-to-neutral)</option>
-              <option value="1ph_2w_ll">1φ 2-wire (line-to-line)</option>
-              <option value="1ph_3w_split">1φ 3-wire (split phase)</option>
-              <option value="3ph_ll_3w" selected>3φ line-to-line (3-wire)</option>
-              <option value="3ph_ln_4w">3φ line-to-neutral (4-wire)</option>
+              <option value="single_phase">Single phase</option>
+              <option value="three_phase" selected>Three phase</option>
             </select>
             <div class="field-hint">
               Select how the load is connected. This determines the voltage-drop factor (CSA Table D3).
@@ -296,7 +293,7 @@
       initializeForm() {
         return {
           circuit: {
-            type: "3ph_ll_3w",
+            type: "three_phase",
             voltage_v: 600,
             current_a: 200,
             run_length_m: 300,
@@ -481,7 +478,7 @@
         const runLengthM = this.form.circuit.run_length_unit === "ft"
           ? this.form.circuit.run_length_m * 0.3048
           : this.form.circuit.run_length_m;
-        const connectionFactor = this.form.circuit.type === "3ph_ll_3w" ? 1.73 : 2;
+        const connectionFactor = this.form.circuit.type === "three_phase" ? 1.73 : 2;
         const kValue = getKValueFromTable(
           recommendedVoltageDropSizeKey,
           this.form.conductors.material,
