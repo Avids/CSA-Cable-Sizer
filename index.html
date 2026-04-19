@@ -21,15 +21,17 @@
           <legend>Circuit Information</legend>
           
           <div class="form-group">
-            <label>Circuit Type <span class="required">*</span></label>
+            <label>Circuit Configuration <span class="required">*</span></label>
             <select id="circuit_type" name="circuit_type" required>
               <option value="">— Select —</option>
-              <option value="1ph_ac">1-Phase AC (e.g., 120/240V residential)</option>
-              <option value="3ph_ac" selected>3-Phase AC (e.g., 347V, 480V, 600V)</option>
-              <option value="dc">DC (specialty)</option>
+              <option value="1ph_2w_ln">1φ 2-wire (line-to-neutral)</option>
+              <option value="1ph_2w_ll">1φ 2-wire (line-to-line)</option>
+              <option value="1ph_3w_split">1φ 3-wire (split phase)</option>
+              <option value="3ph_ll_3w" selected>3φ line-to-line (3-wire)</option>
+              <option value="3ph_ln_4w">3φ line-to-neutral (4-wire)</option>
             </select>
             <div class="field-hint">
-              How the circuit is powered. Affects voltage drop calculations (3-phase uses different factor).
+              Select how the load is connected. This determines the voltage-drop factor (CSA Table D3).
             </div>
           </div>
 
@@ -294,10 +296,11 @@
       initializeForm() {
         return {
           circuit: {
-            type: "3ph_ac",
+            type: "3ph_ll_3w",
             voltage_v: 600,
             current_a: 200,
             run_length_m: 300,
+            run_length_unit: "m",
             max_voltage_drop_pct: 3,
             load_type: "inductive",
             power_factor: 0.9
@@ -434,7 +437,7 @@
         const errors = [];
 
         // Required fields
-        if (!this.form.circuit.type) errors.push("Circuit type required");
+        if (!this.form.circuit.type) errors.push("Circuit configuration required");
         if (this.form.circuit.voltage_v <= 0) errors.push("Voltage must be > 0");
         if (this.form.circuit.current_a <= 0) errors.push("Current must be > 0");
         if (!this.form.conductors.material) errors.push("Conductor material required");
@@ -462,8 +465,10 @@
       calculate() {
         console.log("Calculate called with form data:", this.form);
         const selectedAmpacityColumn = this.form.code_basis.ampacity_col_c;
+        const recommendedAmpacitySizeKey = "000";
+        const recommendedVoltageDropSizeKey = "3/0";
         const ampacityBase = getAmpacityFromTable(
-          "000",
+          recommendedAmpacitySizeKey,
           this.form.conductors.material,
           this.form.installation.type,
           selectedAmpacityColumn
@@ -473,6 +478,20 @@
           selectedAmpacityColumn
         );
         const ampacityAvailable = ampacityBase * correctionFactor;
+        const runLengthM = this.form.circuit.run_length_unit === "ft"
+          ? this.form.circuit.run_length_m * 0.3048
+          : this.form.circuit.run_length_m;
+        const connectionFactor = this.form.circuit.type === "3ph_ll_3w" ? 1.73 : 2;
+        const kValue = getKValueFromTable(
+          recommendedVoltageDropSizeKey,
+          this.form.conductors.material,
+          this.form.circuit.power_factor,
+          this.form.installation.type
+        );
+        // CSA Table D3 voltage drop formula:
+        // VD = (K * f * I * L) / 1000
+        const voltageDropV = (kValue * connectionFactor * this.form.circuit.current_a * runLengthM) / 1000;
+        const voltageDropPct = calculateVoltageDropPercent(voltageDropV, this.form.circuit.voltage_v);
 
         // TODO: Implement full calculation logic:
         // 1. Get correction factor from Table 5A
@@ -492,11 +511,12 @@
           ampacity_base: ampacityBase,
           correction_factor: correctionFactor,
           ampacity_available_a: ampacityAvailable,
-          voltage_drop_k_value: 0.267,
-          voltage_drop_v: 16.0,
-          voltage_drop_pct: 2.7,
+          voltage_drop_k_value: kValue,
+          voltage_drop_factor_f: connectionFactor,
+          voltage_drop_v: voltageDropV,
+          voltage_drop_pct: voltageDropPct,
           bonding_size_awg: "8 AWG",
-          status: "PASS"
+          status: voltageDropPct <= this.form.circuit.max_voltage_drop_pct ? "PASS" : "FAIL"
         };
       }
 
@@ -520,6 +540,10 @@
           <div class="result-row">
             <div class="result-label">Voltage Drop</div>
             <div class="result-value ${this.results.voltage_drop_pct <= this.form.circuit.max_voltage_drop_pct ? 'success' : 'error'}">${this.results.voltage_drop_v.toFixed(2)} V (${this.results.voltage_drop_pct.toFixed(2)}%)</div>
+          </div>
+          <div class="result-row">
+            <div class="result-label">VD Formula Inputs</div>
+            <div class="result-value">K=${this.results.voltage_drop_k_value.toFixed(3)}, f=${this.results.voltage_drop_factor_f}, I=${this.form.circuit.current_a} A, L=${this.form.circuit.run_length_m} ${this.form.circuit.run_length_unit}</div>
           </div>
           <div class="result-row">
             <div class="result-label">Max Allowed VD</div>
