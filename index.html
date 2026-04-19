@@ -100,16 +100,20 @@
             <div class="field-hint">Range 0.5–1.0. Default 0.9 for typical inductive loads.</div>
           </div>
 
-          <div class="form-group">
-            <label>Installation Category <span class="required">*</span></label>
-            <select id="installation_type" name="installation_type" required>
-              <option value="cable">Cable</option>
-              <option value="raceway" selected>Single Conductors in Raceway</option>
-              <option value="free_air">Free Air</option>
-            </select>
-            <div class="field-hint">
-              Determines which CSA ampacity table is used and affects voltage drop calculations.
+          <div class="form-row">
+            <div class="form-group">
+              <label>From</label>
+              <input type="text" id="system_from" name="system_from" placeholder="e.g., Main Switchboard">
             </div>
+            <div class="form-group">
+              <label>To</label>
+              <input type="text" id="system_to" name="system_to" placeholder="e.g., MCC-1">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Project Name</label>
+            <input type="text" id="project_name" name="project_name" placeholder="e.g., Building A Service Upgrade">
           </div>
         </fieldset>
       </div>
@@ -157,6 +161,18 @@
               <label>Parallel Sets</label>
               <input type="number" id="num_parallels" name="num_parallels" value="1" min="1" max="4" step="1" inputmode="numeric" pattern="[0-9]*" required>
               <div class="field-hint">If > 1, each set is calculated separately and summed (Rule 4-029).</div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Installation Category <span class="required">*</span></label>
+            <select id="installation_type" name="installation_type" required>
+              <option value="cable">Cable</option>
+              <option value="raceway" selected>Single Conductors in Raceway</option>
+              <option value="free_air">Free Air</option>
+            </select>
+            <div class="field-hint">
+              Determines which CSA ampacity table is used and affects voltage drop calculations.
             </div>
           </div>
 
@@ -238,7 +254,7 @@
           </div>
 
           <div class="form-group">
-            <label>Ampacity Column</label>
+            <label>Termination temperature Basis</label>
             <select id="ampacity_col" name="ampacity_col">
               <option value="90">90°C</option>
               <option value="75" selected>75°C</option>
@@ -265,6 +281,7 @@
       <div class="form-actions">
         <button type="button" id="btn-calculate" class="btn-primary">Calculate</button>
         <button type="button" id="btn-export-pdf" class="btn-secondary">Export to PDF</button>
+        <button type="button" id="btn-export-json" class="btn-secondary">Save as JSON</button>
         <button type="reset" class="btn-tertiary">Clear Form</button>
       </div>
     </form>
@@ -304,7 +321,10 @@
           },
           system: {
             ambient_temp_c: 30,
-            ambient_temp_unit: "c"
+            ambient_temp_unit: "c",
+            from: "",
+            to: "",
+            project_name: ""
           },
           installation: {
             type: "cable",
@@ -320,7 +340,7 @@
           },
           code_basis: {
             csa_standard: "C22.1:24",
-            ampacity_col_c: 90,
+            ampacity_col_c: 75,
             special_notes: "",
             calculation_notes: ""
           }
@@ -362,7 +382,7 @@
 
         // Calculate button
         document.getElementById("btn-calculate").addEventListener("click", () => {
-          this.validate();
+          if (!this.validate()) return;
           this.calculate();
           this.displayResults();
         });
@@ -370,6 +390,11 @@
         // Export button
         document.getElementById("btn-export-pdf").addEventListener("click", () => {
           this.exportPdf();
+        });
+
+        // JSON export button
+        document.getElementById("btn-export-json").addEventListener("click", () => {
+          this.exportJson();
         });
 
         // Initialize visibility
@@ -389,6 +414,9 @@
           "power_factor": ["circuit", "power_factor"],
           "ambient_temp_c": ["system", "ambient_temp_c"],
           "ambient_temp_unit": ["system", "ambient_temp_unit"],
+          "system_from": ["system", "from"],
+          "system_to": ["system", "to"],
+          "project_name": ["system", "project_name"],
           "conductor_material": ["conductors", "material"],
           "num_conductors": ["conductors", "quantity"],
           "insulation_rating_c": ["conductors", "insulation_rating_c"],
@@ -484,6 +512,8 @@
       calculate() {
         console.log("Calculate called with form data:", this.form);
         const selectedAmpacityColumn = this.form.code_basis.ampacity_col_c;
+        const parallelSets = Math.max(1, this.form.conductors.parallel_sets || 1);
+        const currentPerSet = this.form.circuit.current_a / parallelSets;
         const recommendedAmpacitySizeKey = "000";
         const recommendedVoltageDropSizeKey = "3/0";
         const ampacityBase = getAmpacityFromTable(
@@ -496,7 +526,8 @@
           this.form.system.ambient_temp_c,
           selectedAmpacityColumn
         );
-        const ampacityAvailable = ampacityBase * correctionFactor;
+        const ampacityAvailablePerSet = ampacityBase * correctionFactor;
+        const ampacityAvailableTotal = ampacityAvailablePerSet * parallelSets;
         const runLengthM = this.form.circuit.run_length_unit === "ft"
           ? this.form.circuit.run_length_m * 0.3048
           : this.form.circuit.run_length_m;
@@ -509,7 +540,7 @@
         );
         // CSA Table D3 voltage drop formula:
         // VD = (K * f * I * L) / 1000
-        const voltageDropV = (kValue * connectionFactor * this.form.circuit.current_a * runLengthM) / 1000;
+        const voltageDropV = (kValue * connectionFactor * currentPerSet * runLengthM) / 1000;
         const voltageDropPct = calculateVoltageDropPercent(voltageDropV, this.form.circuit.voltage_v);
 
         // TODO: Implement full calculation logic:
@@ -527,9 +558,13 @@
         this.results = {
           csa_table_ref: document.getElementById("csa_table_ref").value,
           recommended_size_awg: "3/0 AWG",
+          recommended_size_display: `${parallelSets} × 3/0 AWG per phase`,
+          parallel_sets: parallelSets,
+          current_per_set_a: currentPerSet,
           ampacity_base: ampacityBase,
           correction_factor: correctionFactor,
-          ampacity_available_a: ampacityAvailable,
+          ampacity_available_per_set_a: ampacityAvailablePerSet,
+          ampacity_available_a: ampacityAvailableTotal,
           voltage_drop_k_value: kValue,
           voltage_drop_factor_f: connectionFactor,
           voltage_drop_v: voltageDropV,
@@ -545,16 +580,16 @@
 
         const html = `
           <div class="result-row">
-            <div class="result-label">Recommended Size</div>
-            <div class="result-value success">${this.results.recommended_size_awg}</div>
+            <div class="result-label">MINIMUM SIZE</div>
+            <div class="result-value success">${this.results.recommended_size_display}</div>
           </div>
           <div class="result-row">
             <div class="result-label">Available Ampacity</div>
-            <div class="result-value">${this.results.ampacity_available_a.toFixed(1)} A (at ${this.form.code_basis.ampacity_col_c}°C column)</div>
+            <div class="result-value">${this.results.ampacity_available_a.toFixed(1)} A total (${this.results.ampacity_available_per_set_a.toFixed(1)} A per set × ${this.results.parallel_sets})</div>
           </div>
           <div class="result-row">
             <div class="result-label">Load Current</div>
-            <div class="result-value">${this.form.circuit.current_a} A (margin: ${(this.results.ampacity_available_a - this.form.circuit.current_a).toFixed(1)} A)</div>
+            <div class="result-value">${this.form.circuit.current_a} A total (${this.results.current_per_set_a.toFixed(1)} A per set, margin: ${(this.results.ampacity_available_a - this.form.circuit.current_a).toFixed(1)} A)</div>
           </div>
           <div class="result-row">
             <div class="result-label">Voltage Drop</div>
@@ -562,7 +597,7 @@
           </div>
           <div class="result-row">
             <div class="result-label">VD Formula Inputs</div>
-            <div class="result-value">K=${this.results.voltage_drop_k_value.toFixed(3)}, f=${this.results.voltage_drop_factor_f}, I=${this.form.circuit.current_a} A, L=${this.form.circuit.run_length_m} ${this.form.circuit.run_length_unit}</div>
+            <div class="result-value">K=${this.results.voltage_drop_k_value.toFixed(3)}, f=${this.results.voltage_drop_factor_f}, I=${this.results.current_per_set_a.toFixed(1)} A per set × ${this.results.parallel_sets}, L=${this.form.circuit.run_length_m} ${this.form.circuit.run_length_unit}</div>
           </div>
           <div class="result-row">
             <div class="result-label">Max Allowed VD</div>
@@ -614,10 +649,10 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Cable Sizing Report</title>
+  <title>CSA Cable Sizing</title>
   <style>
     @page { size: letter; margin: 0.45in; }
-    body { font-family: Arial, sans-serif; color: #111; margin: 0; font-size: 11px; line-height: 1.25; }
+    body { font-family: Arial, sans-serif; color: #111; margin: 0; font-size: 11px; line-height: 1.25; padding-bottom: 62px; }
     h1 { font-size: 18px; margin: 0 0 4px 0; }
     h2 { font-size: 12px; margin: 12px 0 6px 0; border-bottom: 1px solid #d8d8d8; padding-bottom: 3px; }
     .meta { font-size: 10px; color: #333; margin-bottom: 8px; }
@@ -629,39 +664,41 @@
     .status-fail { color: #b11111; font-weight: bold; }
     ul { margin: 5px 0 0 16px; padding: 0; }
     li { margin: 0 0 3px 0; }
-    .disclaimer { margin-top: 12px; border-top: 1px solid #b5b5b5; padding-top: 7px; font-size: 9.5px; color: #2d2d2d; }
+    .disclaimer { position: fixed; left: 0; right: 0; bottom: 0; border-top: 1px solid #b5b5b5; padding: 7px 0 0 0; font-size: 9.5px; color: #2d2d2d; background: #fff; }
   </style>
 </head>
 <body>
   <h1>CSA Cable Sizing Calculation Report</h1>
   <div class="meta">
-    Generated: ${now.toLocaleString()} | Standard: CSA ${this.form.code_basis.csa_standard} | 1-page summary report
+    Generated: ${now.toLocaleString()} | Standard: CSA ${this.form.code_basis.csa_standard}
   </div>
 
   <h2>1) Initial Data</h2>
   <table>
+    <tr><th>From</th><td>${this.form.system.from || "N/A"}</td><th>To</th><td>${this.form.system.to || "N/A"}</td></tr>
+    <tr><th>Project Name</th><td colspan="3">${this.form.system.project_name || "N/A"}</td></tr>
     <tr><th>Circuit</th><td>${this.form.circuit.type === "three_phase" ? "Three phase" : "Single phase"}</td><th>Source Voltage</th><td>${this.form.circuit.voltage_v} V</td></tr>
     <tr><th>Load Current</th><td>${this.form.circuit.current_a} A</td><th>Run Length</th><td>${this.form.circuit.run_length_m} ${this.form.circuit.run_length_unit} (${runLengthM.toFixed(2)} m)</td></tr>
     <tr><th>Max Voltage Drop</th><td>${this.form.circuit.max_voltage_drop_pct}%</td><th>Power Factor</th><td>${this.form.circuit.power_factor}</td></tr>
-    <tr><th>Conductor</th><td>${this.form.conductors.material}, ${this.form.conductors.quantity} conductors, ${this.form.conductors.parallel_sets} parallel set(s)</td><th>Insulation</th><td>${this.form.conductors.insulation_rating_c}°C</td></tr>
+    <tr><th>Conductor</th><td>${this.form.conductors.material}, ${this.form.conductors.quantity} conductors, ${this.form.conductors.parallel_sets} parallel set(s)</td><th>Conductor Insulation Rating</th><td>${this.form.conductors.insulation_rating_c}°C</td></tr>
     <tr><th>Ambient</th><td>${this.form.system.ambient_temp_c}°${this.form.system.ambient_temp_unit.toUpperCase()}</td><th>Installation</th><td>${this.form.installation.type} (${this.formatInstallationDetails()})</td></tr>
   </table>
 
   <h2>2) Wire Size & Ampacity Calculation</h2>
   <table>
     <tr><th>CSA Ampacity Table</th><td>${this.results.csa_table_ref}</td></tr>
-    <tr><th>Selected Ampacity Column</th><td>${this.form.code_basis.ampacity_col_c}°C column</td></tr>
+    <tr><th>Termination temperature Basis</th><td>${this.form.code_basis.ampacity_col_c}°C column</td></tr>
     <tr><th>Base Ampacity</th><td>${this.results.ampacity_base.toFixed(1)} A</td></tr>
     <tr><th>Temperature Correction (Table 5A)</th><td>${this.results.correction_factor.toFixed(3)}</td></tr>
-    <tr><th>Available Ampacity</th><td>${this.results.ampacity_available_a.toFixed(1)} A</td></tr>
+    <tr><th>Available Ampacity</th><td>${this.results.ampacity_available_a.toFixed(1)} A total (${this.results.ampacity_available_per_set_a.toFixed(1)} A per set × ${this.results.parallel_sets})</td></tr>
     <tr><th>Ampacity Margin</th><td>${ampacityMargin.toFixed(1)} A</td></tr>
-    <tr><th>Recommended Wire Size</th><td>${this.results.recommended_size_awg}</td></tr>
+    <tr><th>Selected Size</th><td><strong>${this.results.recommended_size_display}</strong></td></tr>
   </table>
 
   <h2>3) Voltage Drop Calculation</h2>
   <table>
     <tr><th>Formula</th><td>VD = (K × f × I × L) / 1000</td></tr>
-    <tr><th>Inputs</th><td>K=${this.results.voltage_drop_k_value.toFixed(3)}, f=${this.results.voltage_drop_factor_f}, I=${this.form.circuit.current_a} A, L=${runLengthM.toFixed(2)} m</td></tr>
+    <tr><th>Inputs</th><td>K=${this.results.voltage_drop_k_value.toFixed(3)}, f=${this.results.voltage_drop_factor_f}, I=${this.results.current_per_set_a.toFixed(1)} A per set × ${this.results.parallel_sets}, L=${runLengthM.toFixed(2)} m</td></tr>
     <tr><th>Voltage Drop</th><td>${this.results.voltage_drop_v.toFixed(2)} V (${this.results.voltage_drop_pct.toFixed(2)}%)</td></tr>
     <tr><th>Limit / Status</th><td>Allowed ≤ ${this.form.circuit.max_voltage_drop_pct}% | <span class="${this.results.status === "PASS" ? "status-pass" : "status-fail"}">${this.results.status}</span></td></tr>
   </table>
@@ -707,8 +744,40 @@
         reportWindow.document.open();
         reportWindow.document.write(this.generatePdfReportHtml());
         reportWindow.document.close();
+        reportWindow.document.title = "CSA Cable Sizing";
+        try {
+          reportWindow.history.replaceState({}, "CSA Cable Sizing", "csa-cable-sizing");
+        } catch (error) {
+          // Ignore if browser blocks history updates for the print window
+        }
         reportWindow.focus();
         reportWindow.print();
+      }
+
+      exportJson() {
+        if (!this.results) {
+          if (!this.validate()) return;
+          this.calculate();
+          this.displayResults();
+        }
+
+        const exportPayload = {
+          generated_at: new Date().toISOString(),
+          app: "CSA Cable Sizing",
+          form: this.form,
+          results: this.results
+        };
+
+        const blob = new Blob([JSON.stringify(exportPayload, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+        link.href = url;
+        link.download = `csa-cable-sizing-${timestamp}.json`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
       }
     }
 
