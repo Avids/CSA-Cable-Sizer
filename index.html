@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSA C22.1:24 Cable Sizing Calculator</title>
+  <style>
+    /* ===== VARIABLES & RESETS ===== */
+    :root {
+      --color-bg-primary: #1e1e1e;
+      --color-bg-secondary: #2d2d2d;
+      --color-text-primary: #e0e0e0;
+      --color-text-secondary: #a0a0a0;
+      --color-border: #404040;
+      --color-input-bg: #252525;
+      --color-accent: #0066cc;
+      --color-error: #ff6b6b;
+      --color-warning: #ffcc00;
+      --color-success: #4caf50;
+      --spacing: 8px;
+      --radius: 4px;
+      --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: var(--font-family);
+      background-color: var(--color-bg-primary);
+      color: var(--color-text-primary);
+      line-height: 1.6;
+      margin: 0;
+      padding: 0;
+    }
+
+    /* ===== HEADER ===== */
+    header {
+      background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+      padding: calc(var(--spacing) * 3);
+      border-bottom: 2px solid var(--color-accent);
+      text-align: center;
+    }
+
+    header h1 {
+      margin: 0 0 calc(var(--spacing) * 0.5) 0;
+      font-size: 1.8rem;
+      color: var(--color-text-primary);
+    }
+
+    header p {
+      margin: 0;
+      color: var(--color-text-secondary);
+      font-size: 0.9rem;
+    }
+
+    /* ===== MAIN LAYOUT ===== */
+    main {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: calc(var(--spacing) * 3);
+    }
+
+    .form-wrapper {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: calc(var(--spacing) * 2);
+      margin-bottom: calc(var(--spacing) * 3);
+    }
+
+    .form-full-width {
+      grid-column: 1 / -1;
+    }
+
+    @media (max-width: 768px) {
+      .form-wrapper {
+        grid-template-columns: 1fr;
+      }
+      .form-full-width {
+        grid-column: 1;
+      }
+    }
+
+    /* ===== FIELDSETS ===== */
+    fieldset {
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      padding: calc(var(--spacing) * 2);
+      margin: 0;
+      background-color: var(--color-bg-secondary);
+    }
+
+    fieldset legend {
+      font-weight: 600;
+      font-size: 1rem;
+      padding: 0 calc(var(--spacing) * 0.5);
+      color: var(--color-text-primary);
+    }
+
+    .fieldset-help {
+      font-size: 0.85rem;
+      color: var(--color-text-secondary);
+      margin: calc(var(--spacing) * 0.5) 0 calc(var(--spacing) * 1.5) 0;
+      font-style: italic;
+    }
+
+    /* ===== FORM FIELDS ===== */
+    .form-group {
+      margin-bottom: calc(var(--spacing) * 2);
+    }
+
+    .form-group:last-child {
+      margin-bottom: 0;
+    }
+
+    label {
+      display: block;
+      font-weight: 500;
+      margin-bottom: calc(var(--spacing) * 0.75);
+      color: var(--color-text-primary);
+      font-size: 0.95rem;
+    }
+
+    label .required {
+      color: var(--color-error);
+      margin-left: calc(var(--spacing) * 0.25);
+    }
+
+    label .info-icon {
+      display: inline-block;
+      width: 18px;
+      height: 18px;
+      line-height: 18px;
+      text-align: center;
+      background: var(--color-accent);
+      color: white;
+      border-radius: 50%;
+      font-size: 0.7rem;
+      font-weight: bold;
+      margin-left: calc(var(--spacing) * 0.5);
+      cursor: help;
+      vertical-align: middle;
+    }
+
+    .field-hint {
+      font-size: 0.8rem;
+      color: var(--color-text-secondary);
+      margin-top: calc(var(--spacing) * 0.5);
+      font-style: italic;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    select,
+    textarea {
+      width: 100%;
+      padding: calc(var(--spacing) * 0.75);
+      background-color: var(--color-input-bg);
+      color: var(--color-text-primary);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      font-family: var(--font-family);
+      font-size: 0.95rem;
+      transition: border-color 0.2s;
+    }
+
+    input[type="text"]:focus,
+    input[type="number"]:focus,
+    select:focus,
+    textarea:focus {
+      outline: none;
+      border-color: var(--color-accent);
+      box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.1);
+    }
+
+    input[type="text"]::placeholder,
+    input[type="number"]::placeholder {
+      color: var(--color-text-secondary);
+    }
+
+    /* ===== RADIO BUTTONS ===== */
+    .radio-group {
+      display: flex;
+      flex-direction: column;
+      gap: calc(var(--spacing) * 1);
+    }
+
+    .radio-group label {
+      display: flex;
+      align-items: flex-start;
+      margin-bottom: 0;
+      cursor: pointer;
+      padding: calc(var(--spacing) * 1);
+      border: 1px solid transparent;
+      border-radius: var(--radius);
+      transition: background-color 0.2s, border-color 0.2s;
+    }
+
+    .radio-group label:hover {
+      background-color: rgba(0, 102, 204, 0.05);
+    }
+
+    .radio-group label input[type="radio"] {
+      width: auto;
+      height: auto;
+      margin-right: calc(var(--spacing) * 1);
+      margin-top: calc(var(--spacing) * 0.25);
+      cursor: pointer;
+      accent-color: var(--color-accent);
+    }
+
+    .radio-group label input[type="radio"]:checked + .option-content {
+      color: var(--color-accent);
+    }
+
+    .radio-group .option-content {
+      flex: 1;
+    }
+
+    .option-title {
+      display: block;
+      font-weight: 600;
+      color: var(--color-text-primary);
+      margin-bottom: calc(var(--spacing) * 0.25);
+    }
+
+    .option-desc {
+      display: block;
+      font-size: 0.85rem;
+      color: var(--color-text-secondary);
+    }
+
+    /* ===== TWO-COLUMN FIELD LAYOUT ===== */
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: calc(var(--spacing) * 1);
+    }
+
+    .form-row.full {
+      grid-template-columns: 1fr;
+    }
+
+    @media (max-width: 600px) {
+      .form-row {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* ===== BUTTONS ===== */
+    .form-actions {
+      display: flex;
+      gap: calc(var(--spacing) * 1);
+      margin-top: calc(var(--spacing) * 3);
+      flex-wrap: wrap;
+    }
+
+    button {
+      padding: calc(var(--spacing) * 0.75) calc(var(--spacing) * 2);
+      border: none;
+      border-radius: var(--radius);
+      font-family: var(--font-family);
+      font-size: 0.95rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+
+    button:active {
+      transform: scale(0.98);
+    }
+
+    .btn-primary {
+      background-color: var(--color-accent);
+      color: white;
+      flex: 1;
+      min-width: 150px;
+    }
+
+    .btn-primary:hover {
+      background-color: #0051a8;
+    }
+
+    .btn-secondary {
+      background-color: var(--color-bg-secondary);
+      color: var(--color-text-primary);
+      border: 1px solid var(--color-border);
+      flex: 1;
+      min-width: 150px;
+    }
+
+    .btn-secondary:hover {
+      background-color: #3d3d3d;
+    }
+
+    .btn-tertiary {
+      background-color: transparent;
+      color: var(--color-text-secondary);
+      border: 1px solid var(--color-border);
+    }
+
+    .btn-tertiary:hover {
+      border-color: var(--color-text-secondary);
+      color: var(--color-text-primary);
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* ===== RESULTS PANEL ===== */
+    #results-panel {
+      margin-top: calc(var(--spacing) * 3);
+      display: none;
+    }
+
+    #results-panel.visible {
+      display: block;
+    }
+
+    .result-row {
+      display: grid;
+      grid-template-columns: 200px 1fr;
+      gap: calc(var(--spacing) * 2);
+      padding: calc(var(--spacing) * 1.5);
+      border-bottom: 1px solid var(--color-border);
+      align-items: center;
+    }
+
+    .result-row:last-child {
+      border-bottom: none;
+    }
+
+    .result-label {
+      font-weight: 600;
+      color: var(--color-text-secondary);
+      font-size: 0.9rem;
+    }
+
+    .result-value {
+      font-size: 1.1rem;
+      color: var(--color-text-primary);
+      word-break: break-word;
+    }
+
+    .result-value.success {
+      color: var(--color-success);
+      font-weight: 600;
+    }
+
+    .result-value.warning {
+      color: var(--color-warning);
+      font-weight: 600;
+    }
+
+    .result-value.error {
+      color: var(--color-error);
+      font-weight: 600;
+    }
+
+    /* ===== HIDDEN FIELDS ===== */
+    .hidden {
+      display: none !important;
+    }
+
+    /* ===== ERROR STATES ===== */
+    .field-error {
+      border-color: var(--color-error) !important;
+    }
+
+    .error-message {
+      color: var(--color-error);
+      font-size: 0.8rem;
+      margin-top: calc(var(--spacing) * 0.5);
+    }
+
+    /* ===== PRINT STYLES ===== */
+    @media print {
+      body {
+        background: white;
+        color: black;
+      }
+
+      header {
+        background: white;
+        border-bottom: 2px solid black;
+      }
+
+      fieldset {
+        background: white;
+        border: 1px solid #ccc;
+      }
+
+      .form-actions {
+        display: none;
+      }
+
+      input[type="text"],
+      input[type="number"],
+      select,
+      textarea {
+        background: white;
+        color: black;
+        border: 1px solid #ccc;
+      }
+
+      .hidden {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Cable Sizing Calculator</h1>
+    <p>CSA C22.1:24 Edition | Conductor Ampacity & Voltage Drop</p>
+  </header>
+
+  <main>
+    <form id="cable-form">
+      <div class="form-wrapper">
+        
+        <!-- LEFT COLUMN: CIRCUIT INFORMATION -->
+        <fieldset id="circuit-info-fieldset">
+          <legend>Circuit Information</legend>
+          
+          <div class="form-group">
+            <label>Circuit Type <span class="required">*</span></label>
+            <select id="circuit_type" name="circuit_type" required>
+              <option value="">— Select —</option>
+              <option value="1ph_ac">1-Phase AC (e.g., 120/240V residential)</option>
+              <option value="3ph_ac" selected>3-Phase AC (e.g., 347V, 480V, 600V)</option>
+              <option value="dc">DC (specialty)</option>
+            </select>
+            <div class="field-hint">
+              How the circuit is powered. Affects voltage drop calculations (3-phase uses different factor).
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Source Voltage <span class="required">*</span>
+              <span class="info-icon" title="The voltage at the electrical service or distribution point">?</span>
+            </label>
+            <input type="number" id="voltage_v" name="voltage_v" value="600" min="1" max="99999" required>
+            <div class="field-hint">e.g., 120, 240, 347, 480, 600 volts</div>
+          </div>
+
+          <div class="form-group">
+            <label>Load Current <span class="required">*</span>
+              <span class="info-icon" title="Steady-state amperage at full load">?</span>
+            </label>
+            <input type="number" id="current_a" name="current_a" value="200" min="0.1" max="10000" step="0.1" required>
+            <div class="field-hint">Amperes at the point of load. Use nameplate rating or calculated load.</div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Length of Run <span class="required">*</span></label>
+              <input type="number" id="run_length" name="run_length" value="300" min="1" max="99999" step="1" required>
+            </div>
+            <div class="form-group">
+              <label>Unit</label>
+              <select id="run_length_unit" name="run_length_unit">
+                <option value="m" selected>Meters (m)</option>
+                <option value="ft">Feet (ft)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Max Voltage Drop <span class="required">*</span>
+              <span class="info-icon" title="CSA Rule 4-008: typical 3-5%">?</span>
+            </label>
+            <input type="number" id="max_voltage_drop_pct" name="max_voltage_drop_pct" value="3" min="0.1" max="10" step="0.1" required>
+            <div class="field-hint">Percentage of source voltage. Typical: 3–5% per feeder, max 5% combined.</div>
+          </div>
+        </fieldset>
+
+        <!-- ELECTRICAL SYSTEM (continued in left column) -->
+        <fieldset id="electrical-system-fieldset">
+          <legend>Electrical System</legend>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Ambient Temp. <span class="required">*</span>
+                <span class="info-icon" title="Temperature around the conductors when fully loaded. Default 30°C per CSA.">?</span>
+              </label>
+              <input type="number" id="ambient_temp_c" name="ambient_temp_c" value="30" min="0" max="150" required>
+              <div class="field-hint">Celsius. Higher temps reduce ampacity (Table 5A).</div>
+            </div>
+            <div class="form-group">
+              <label>Temp. Unit</label>
+              <select id="ambient_temp_unit" name="ambient_temp_unit">
+                <option value="c" selected>°C</option>
+                <option value="f">°F</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Power Factor
+              <span class="info-icon" title="Ratio of real to apparent power. 1.0 = resistive, <1.0 = inductive">?</span>
+            </label>
+            <input type="number" id="power_factor" name="power_factor" value="0.9" min="0.5" max="1.0" step="0.05">
+            <div class="field-hint">Range 0.5–1.0. Default 0.9 for typical inductive loads.</div>
+          </div>
+
+          <div class="form-group">
+            <label>Load Type</label>
+            <select id="load_type" name="load_type">
+              <option value="inductive" selected>Inductive (motors, ballasts)</option>
+              <option value="resistive">Resistive (heaters, lights)</option>
+              <option value="mixed">Mixed</option>
+            </select>
+            <div class="field-hint">Informs power factor selection and derating decisions.</div>
+          </div>
+        </fieldset>
+
+        <!-- RIGHT COLUMN: INSTALLATION CATEGORY (Primary Control) -->
+        <fieldset id="installation-category-fieldset" class="form-full-width">
+          <legend>Installation Category <span class="required">*</span></legend>
+          <p class="fieldset-help">
+            How are the conductors installed? This determines which CSA ampacity table is used and affects voltage drop calculations.
+          </p>
+
+          <div class="radio-group">
+            <label>
+              <input type="radio" name="installation_type" value="cable" checked required>
+              <div class="option-content">
+                <span class="option-title">Cable Assembly</span>
+                <span class="option-desc">
+                  TECK, ACWU, NMD, or direct burial cable. Multi-conductor assembly rated as a unit.
+                </span>
+              </div>
+            </label>
+
+            <label>
+              <input type="radio" name="installation_type" value="raceway" required>
+              <div class="option-content">
+                <span class="option-title">Single Conductors in Raceway</span>
+                <span class="option-desc">
+                  Individual RW90, XHHW-2, or similar conductors installed in steel, aluminum, or PVC conduit.
+                </span>
+              </div>
+            </label>
+
+            <label>
+              <input type="radio" name="installation_type" value="free_air" required>
+              <div class="option-content">
+                <span class="option-title">Free Air / Overhead</span>
+                <span class="option-desc">
+                  Single or grouped conductors in free air, on surface of masonry, or on outdoor structures.
+                </span>
+              </div>
+            </label>
+          </div>
+        </fieldset>
+      </div>
+
+      <!-- MIDDLE SECTION: CONDUCTORS & INSTALLATION -->
+      <div class="form-wrapper">
+        <fieldset id="conductors-fieldset">
+          <legend>Conductors & Installation</legend>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Conductor Material <span class="required">*</span></label>
+              <select id="conductor_material" name="conductor_material" required>
+                <option value="">— Select —</option>
+                <option value="copper" selected>Copper (lower resistance, higher ampacity)</option>
+                <option value="aluminum">Aluminum (lighter, lower cost, needs larger size)</option>
+              </select>
+              <div class="field-hint">CSA Tables 1–4 provide separate values for each material.</div>
+            </div>
+
+            <div class="form-group">
+              <label>Number of Conductors <span class="required">*</span></label>
+              <input type="number" id="num_conductors" name="num_conductors" value="3" min="1" max="4" required>
+              <div class="field-hint">Per set. Typically 2 (2-wire), 3 (3-wire), or 4 (3-wire + ground).</div>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Insulation Rating <span class="required">*</span>
+                <span class="info-icon" title="Maximum temperature at which insulation is rated. Higher = higher ampacity.">?</span>
+              </label>
+              <select id="insulation_rating_c" name="insulation_rating_c" required>
+                <option value="">— Select —</option>
+                <option value="60">60°C</option>
+                <option value="75">75°C (standard)</option>
+                <option value="90" selected>90°C (enhanced)</option>
+                <option value="110">110°C (special)</option>
+                <option value="125">125°C (special)</option>
+              </select>
+              <div class="field-hint">Common: 75°C (standard), 90°C (commercial/industrial).</div>
+            </div>
+
+            <div class="form-group">
+              <label>Parallel Sets</label>
+              <input type="number" id="num_parallels" name="num_parallels" value="1" min="1" max="4" step="1">
+              <div class="field-hint">If > 1, each set is calculated separately and summed (Rule 4-029).</div>
+            </div>
+          </div>
+
+          <!-- CONDITIONAL: IF CABLE -->
+          <div id="cable-details" class="hidden">
+            <div class="form-group">
+              <label>Cable Type <span class="required">*</span></label>
+              <select id="cable_type" name="cable_type">
+                <option value="">— Select —</option>
+                <option value="teck">TECK (steel-armored, general use)</option>
+                <option value="acwu">ACWU (armored, CU armor)</option>
+                <option value="nmd">NMD (nonmetallic, indoor residential)</option>
+                <option value="direct_burial">Direct Burial (underground)</option>
+              </select>
+              <div class="field-hint">
+                TECK = most common; rated for exposed and underground.
+                NMD = residential interior only.
+              </div>
+            </div>
+          </div>
+
+          <!-- CONDITIONAL: IF RACEWAY -->
+          <div id="raceway-details" class="hidden">
+            <div class="form-group">
+              <label>Raceway Type <span class="required">*</span></label>
+              <select id="raceway_type" name="raceway_type">
+                <option value="">— Select —</option>
+                <option value="steel">Steel Conduit (standard industrial)</option>
+                <option value="aluminum">Aluminum Conduit (lighter, corrosion-resistant)</option>
+                <option value="pvc">PVC Conduit (non-conductive, chemical resistant)</option>
+              </select>
+              <div class="field-hint">Choice affects voltage drop K value (Table D3).</div>
+            </div>
+
+            <div class="form-group">
+              <label>Total Conductors in Raceway <span class="required">*</span>
+                <span class="info-icon" title="Total number including all phases, neutral, ground. Used for grouping deduction (Table 5C).">?</span>
+              </label>
+              <input type="number" id="conductors_in_run" name="conductors_in_run" value="3" min="1" max="10">
+              <div class="field-hint">Used to determine grouping deduction per Table 5C.</div>
+            </div>
+          </div>
+
+          <!-- CONDITIONAL: IF FREE AIR -->
+          <div id="free-air-details" class="hidden">
+            <div class="form-group">
+              <label>Mounting Configuration <span class="required">*</span></label>
+              <select id="free_air_mounting" name="free_air_mounting">
+                <option value="">— Select —</option>
+                <option value="single">Single (one conductor, free air)</option>
+                <option value="grouped">Grouped (multiple conductors touching)</option>
+                <option value="spaced">Spaced (multiple conductors separated)</option>
+                <option value="on_masonry">On Masonry (single on wall surface)</option>
+              </select>
+              <div class="field-hint">Table 1, Note 1: Surface mounting may increase ampacity.</div>
+            </div>
+
+            <div class="form-group">
+              <label>Surface Material</label>
+              <select id="surface_contact" name="surface_contact">
+                <option value="none">None (free air)</option>
+                <option value="masonry">Masonry or Plaster</option>
+                <option value="wood">Wood</option>
+                <option value="other">Other</option>
+              </select>
+              <div class="field-hint">If mounted on surface, specify material (affects thermal dissipation).</div>
+            </div>
+          </div>
+        </fieldset>
+
+        <!-- CODE BASIS -->
+        <fieldset id="code-basis-fieldset">
+          <legend>Code Basis & Notes</legend>
+
+          <div class="form-group">
+            <label>CSA Table Reference</label>
+            <input type="text" id="csa_table_ref" name="csa_table_ref" readonly disabled placeholder="Auto-populated after calculation">
+            <div class="field-hint">Determined by installation type and conductor material.</div>
+          </div>
+
+          <div class="form-group">
+            <label>Ampacity Column</label>
+            <input type="text" id="ampacity_col" name="ampacity_col" readonly disabled placeholder="e.g., 90°C">
+            <div class="field-hint">Based on insulation rating.</div>
+          </div>
+
+          <div class="form-group">
+            <label>Special Conditions / Deviations</label>
+            <textarea id="special_notes" name="special_notes" rows="2" placeholder="e.g., Rule 2-030 deviation, site-specific constraints"></textarea>
+            <div class="field-hint">Optional. Document any Rule deviations or special circumstances.</div>
+          </div>
+
+          <div class="form-group">
+            <label>Calculation Notes</label>
+            <textarea id="calculation_notes" name="calculation_notes" rows="2" placeholder="e.g., project name, engineer, date"></textarea>
+            <div class="field-hint">Optional. Add context for this calculation (project, designer, notes).</div>
+          </div>
+        </fieldset>
+      </div>
+
+      <!-- BUTTONS -->
+      <div class="form-actions">
+        <button type="button" id="btn-calculate" class="btn-primary">Calculate</button>
+        <button type="button" id="btn-export-pdf" class="btn-secondary">Export to PDF</button>
+        <button type="reset" class="btn-tertiary">Clear Form</button>
+      </div>
+    </form>
+
+    <!-- RESULTS PANEL -->
+    <section id="results-panel">
+      <fieldset id="results-fieldset">
+        <legend>Calculation Results</legend>
+        <div id="results-content">
+          <!-- Populated by JavaScript -->
+        </div>
+      </fieldset>
+    </section>
+  </main>
+
+  <!-- SCRIPTS -->
+  <script src="csa_tables.js"></script>
+  <script>
+    // ===== FORM CONTROLLER =====
+    class CableSelectionController {
+      constructor() {
+        this.form = this.initializeForm();
+        this.setupEventListeners();
+      }
+
+      initializeForm() {
+        return {
+          circuit: {
+            type: "3ph_ac",
+            voltage_v: 600,
+            current_a: 200,
+            run_length_m: 300,
+            max_voltage_drop_pct: 3,
+            load_type: "inductive",
+            power_factor: 0.9
+          },
+          system: {
+            ambient_temp_c: 30,
+            ambient_temp_unit: "c"
+          },
+          installation: {
+            type: "cable",
+            cable: { cable_type: "teck" },
+            raceway: { raceway_type: "steel", conductors_in_run: 3 },
+            free_air: { mounting: "single", surface_contact: "none" }
+          },
+          conductors: {
+            material: "copper",
+            quantity: 3,
+            parallel_sets: 1,
+            insulation_rating_c: 90
+          },
+          code_basis: {
+            csa_standard: "C22.1:24",
+            special_notes: "",
+            calculation_notes: ""
+          }
+        };
+      }
+
+      setupEventListeners() {
+        // Installation type change: show/hide conditional fields
+        document.querySelectorAll('input[name="installation_type"]').forEach(radio => {
+          radio.addEventListener("change", (e) => {
+            this.form.installation.type = e.target.value;
+            this.updateFieldVisibility();
+          });
+        });
+
+        // Update form on any input change
+        document.getElementById("cable-form").addEventListener("change", (e) => {
+          const name = e.target.name;
+          const value = e.target.type === "number" ? parseFloat(e.target.value) : e.target.value;
+          this.updateFormValue(name, value);
+        });
+
+        // Calculate button
+        document.getElementById("btn-calculate").addEventListener("click", () => {
+          this.validate();
+          this.calculate();
+          this.displayResults();
+        });
+
+        // Export button
+        document.getElementById("btn-export-pdf").addEventListener("click", () => {
+          this.exportPdf();
+        });
+
+        // Initialize visibility
+        this.updateFieldVisibility();
+      }
+
+      updateFormValue(name, value) {
+        // Map form field names to nested form object
+        const fieldMap = {
+          "circuit_type": ["circuit", "type"],
+          "voltage_v": ["circuit", "voltage_v"],
+          "current_a": ["circuit", "current_a"],
+          "run_length": ["circuit", "run_length_m"],  // Will convert units
+          "run_length_unit": ["circuit", "run_length_unit"],
+          "max_voltage_drop_pct": ["circuit", "max_voltage_drop_pct"],
+          "load_type": ["circuit", "load_type"],
+          "power_factor": ["circuit", "power_factor"],
+          "ambient_temp_c": ["system", "ambient_temp_c"],
+          "ambient_temp_unit": ["system", "ambient_temp_unit"],
+          "conductor_material": ["conductors", "material"],
+          "num_conductors": ["conductors", "quantity"],
+          "insulation_rating_c": ["conductors", "insulation_rating_c"],
+          "num_parallels": ["conductors", "parallel_sets"],
+          "cable_type": ["installation", "cable", "cable_type"],
+          "raceway_type": ["installation", "raceway", "raceway_type"],
+          "conductors_in_run": ["installation", "raceway", "conductors_in_run"],
+          "free_air_mounting": ["installation", "free_air", "mounting"],
+          "surface_contact": ["installation", "free_air", "surface_contact"],
+          "special_notes": ["code_basis", "special_notes"],
+          "calculation_notes": ["code_basis", "calculation_notes"]
+        };
+
+        const path = fieldMap[name];
+        if (path) {
+          let obj = this.form;
+          for (let i = 0; i < path.length - 1; i++) {
+            obj = obj[path[i]];
+          }
+          obj[path[path.length - 1]] = value;
+        }
+      }
+
+      updateFieldVisibility() {
+        const installationType = this.form.installation.type;
+
+        // Hide all conditional sections
+        document.getElementById("cable-details").classList.add("hidden");
+        document.getElementById("raceway-details").classList.add("hidden");
+        document.getElementById("free-air-details").classList.add("hidden");
+
+        // Show appropriate section
+        if (installationType === "cable") {
+          document.getElementById("cable-details").classList.remove("hidden");
+        } else if (installationType === "raceway") {
+          document.getElementById("raceway-details").classList.remove("hidden");
+        } else if (installationType === "free_air") {
+          document.getElementById("free-air-details").classList.remove("hidden");
+        }
+
+        // Update CSA table reference
+        this.updateCsaTableRef();
+      }
+
+      updateCsaTableRef() {
+        const material = this.form.conductors.material;
+        const installationType = this.form.installation.type;
+
+        let tableRef = "Unknown";
+        if (installationType === "free_air") {
+          tableRef = material === "copper" ? "Table 1" : "Table 3";
+        } else {
+          tableRef = material === "copper" ? "Table 2" : "Table 4";
+        }
+
+        document.getElementById("csa_table_ref").value = tableRef;
+
+        const insulationLabel = `${this.form.conductors.insulation_rating_c}°C`;
+        document.getElementById("ampacity_col").value = insulationLabel;
+      }
+
+      validate() {
+        const errors = [];
+
+        // Required fields
+        if (!this.form.circuit.type) errors.push("Circuit type required");
+        if (this.form.circuit.voltage_v <= 0) errors.push("Voltage must be > 0");
+        if (this.form.circuit.current_a <= 0) errors.push("Current must be > 0");
+        if (!this.form.conductors.material) errors.push("Conductor material required");
+        if (!this.form.installation.type) errors.push("Installation type required");
+
+        // Conditional
+        if (this.form.installation.type === "cable" && !this.form.installation.cable.cable_type) {
+          errors.push("Cable type required");
+        }
+        if (this.form.installation.type === "raceway" && !this.form.installation.raceway.raceway_type) {
+          errors.push("Raceway type required");
+        }
+        if (this.form.installation.type === "free_air" && !this.form.installation.free_air.mounting) {
+          errors.push("Free air mounting required");
+        }
+
+        if (errors.length > 0) {
+          alert("Form validation errors:\n" + errors.join("\n"));
+          return false;
+        }
+
+        return true;
+      }
+
+      calculate() {
+        console.log("Calculate called with form data:", this.form);
+
+        // TODO: Implement full calculation logic:
+        // 1. Get correction factor from Table 5A
+        // 2. Iterate through conductor sizes
+        // 3. For each size, look up ampacity from CSA table
+        // 4. Apply correction factor
+        // 5. Check if ampacity >= required current
+        // 6. Get K value from Table D3
+        // 7. Calculate voltage drop
+        // 8. Check if voltage drop <= max allowed
+        // 9. Return first size that satisfies both constraints
+
+        // PLACEHOLDER RESULTS
+        this.results = {
+          csa_table_ref: document.getElementById("csa_table_ref").value,
+          recommended_size_awg: "3/0 AWG",
+          ampacity_base: 310,
+          correction_factor: 0.96,
+          ampacity_available_a: 297.6,
+          voltage_drop_k_value: 0.267,
+          voltage_drop_v: 16.0,
+          voltage_drop_pct: 2.7,
+          bonding_size_awg: "8 AWG",
+          status: "PASS"
+        };
+      }
+
+      displayResults() {
+        const resultsPanel = document.getElementById("results-panel");
+        const resultsContent = document.getElementById("results-content");
+
+        const html = `
+          <div class="result-row">
+            <div class="result-label">Recommended Size</div>
+            <div class="result-value success">${this.results.recommended_size_awg}</div>
+          </div>
+          <div class="result-row">
+            <div class="result-label">Available Ampacity</div>
+            <div class="result-value">${this.results.ampacity_available_a.toFixed(1)} A (at ${this.form.conductors.insulation_rating_c}°C)</div>
+          </div>
+          <div class="result-row">
+            <div class="result-label">Load Current</div>
+            <div class="result-value">${this.form.circuit.current_a} A (margin: ${(this.results.ampacity_available_a - this.form.circuit.current_a).toFixed(1)} A)</div>
+          </div>
+          <div class="result-row">
+            <div class="result-label">Voltage Drop</div>
+            <div class="result-value ${this.results.voltage_drop_pct <= this.form.circuit.max_voltage_drop_pct ? 'success' : 'error'}">${this.results.voltage_drop_v.toFixed(2)} V (${this.results.voltage_drop_pct.toFixed(2)}%)</div>
+          </div>
+          <div class="result-row">
+            <div class="result-label">Max Allowed VD</div>
+            <div class="result-value">${this.form.circuit.max_voltage_drop_pct}%</div>
+          </div>
+          <div class="result-row">
+            <div class="result-label">CSA Table</div>
+            <div class="result-value">${this.results.csa_table_ref}</div>
+          </div>
+          <div class="result-row">
+            <div class="result-label">Temperature Correction</div>
+            <div class="result-value">${this.results.correction_factor.toFixed(3)} (from Table 5A)</div>
+          </div>
+        `;
+
+        resultsContent.innerHTML = html;
+        resultsPanel.classList.add("visible");
+      }
+
+      exportPdf() {
+        alert("PDF export feature coming soon.\nWould include:\n- Form inputs\n- Calculation steps\n- Results summary\n- CSA rule citations");
+        // TODO: Implement PDF generation (jsPDF or similar)
+      }
+    }
+
+    // Initialize controller on page load
+    document.addEventListener("DOMContentLoaded", () => {
+      new CableSelectionController();
+    });
+  </script>
+</body>
+</html>
