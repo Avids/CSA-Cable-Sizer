@@ -155,7 +155,7 @@
 
             <div class="form-group">
               <label>Parallel Sets</label>
-              <input type="number" id="num_parallels" name="num_parallels" value="1" min="1" max="4" step="1">
+              <input type="number" id="num_parallels" name="num_parallels" value="1" min="1" max="4" step="1" inputmode="numeric" pattern="[0-9]*" required>
               <div class="field-hint">If > 1, each set is calculated separately and summed (Rule 4-029).</div>
             </div>
           </div>
@@ -334,6 +334,25 @@
           this.updateFieldVisibility();
         });
 
+        // Keep parallel sets as whole numbers >= 1
+        document.getElementById("num_parallels").addEventListener("input", (e) => {
+          const rawValue = e.target.value.trim();
+
+          if (rawValue === "") {
+            e.target.setCustomValidity("Parallel sets must be an integer of 1 or greater.");
+            return;
+          }
+
+          const numericValue = Number(rawValue);
+          const isWholeNumber = Number.isInteger(numericValue) && numericValue >= 1;
+
+          if (!isWholeNumber) {
+            e.target.setCustomValidity("Parallel sets must be an integer of 1 or greater.");
+          } else {
+            e.target.setCustomValidity("");
+          }
+        });
+
         // Update form on any input change
         document.getElementById("cable-form").addEventListener("change", (e) => {
           const name = e.target.name;
@@ -439,6 +458,9 @@
         if (this.form.circuit.current_a <= 0) errors.push("Current must be > 0");
         if (!this.form.conductors.material) errors.push("Conductor material required");
         if (!this.form.installation.type) errors.push("Installation type required");
+        if (!Number.isInteger(this.form.conductors.parallel_sets) || this.form.conductors.parallel_sets < 1) {
+          errors.push("Parallel sets must be an integer of 1 or greater");
+        }
 
         // Conditional
         if (this.form.installation.type === "cable" && !this.form.installation.cable.cable_type) {
