@@ -104,9 +104,9 @@
           <div class="form-group">
             <label>Installation Category <span class="required">*</span></label>
             <select id="installation_type" name="installation_type" required>
-              <option value="cable" selected>Cable Assembly</option>
-              <option value="raceway">Single Conductors in Raceway</option>
-              <option value="free_air">Free Air / Overhead</option>
+              <option value="raceway" selected>Single Conductors in Raceway</option>
+              <option value="cable">Cable</option>
+              <option value="free_air">Free Air</option>
             </select>
             <div class="field-hint">
               Determines which CSA ampacity table is used and affects voltage drop calculations.
@@ -241,8 +241,8 @@
           <div class="form-group">
             <label>Ampacity Column</label>
             <select id="ampacity_col" name="ampacity_col">
-              <option value="90" selected>90°C</option>
-              <option value="75">75°C</option>
+              <option value="90">90°C</option>
+              <option value="75" selected>75°C</option>
               <option value="60">60°C</option>
             </select>
             <div class="field-hint">Select the CSA ampacity column used for conductor ampacity lookup.</div>
