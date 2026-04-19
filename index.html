@@ -465,9 +465,10 @@
       calculate() {
         console.log("Calculate called with form data:", this.form);
         const selectedAmpacityColumn = this.form.code_basis.ampacity_col_c;
-        const recommendedSizeKey = "000";
+        const recommendedAmpacitySizeKey = "000";
+        const recommendedVoltageDropSizeKey = "3/0";
         const ampacityBase = getAmpacityFromTable(
-          recommendedSizeKey,
+          recommendedAmpacitySizeKey,
           this.form.conductors.material,
           this.form.installation.type,
           selectedAmpacityColumn
@@ -482,7 +483,7 @@
           : this.form.circuit.run_length_m;
         const connectionFactor = this.form.circuit.type === "3ph_ll_3w" ? 1.73 : 2;
         const kValue = getKValueFromTable(
-          recommendedSizeKey,
+          recommendedVoltageDropSizeKey,
           this.form.conductors.material,
           this.form.circuit.power_factor,
           this.form.installation.type
