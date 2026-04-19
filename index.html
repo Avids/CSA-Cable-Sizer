@@ -100,16 +100,20 @@
             <div class="field-hint">Range 0.5–1.0. Default 0.9 for typical inductive loads.</div>
           </div>
 
-          <div class="form-group">
-            <label>Installation Category <span class="required">*</span></label>
-            <select id="installation_type" name="installation_type" required>
-              <option value="cable" selected>Cable</option>
-              <option value="raceway">Single Conductors in Raceway</option>
-              <option value="free_air">Free Air</option>
-            </select>
-            <div class="field-hint">
-              Determines which CSA ampacity table is used and affects voltage drop calculations.
+          <div class="form-row">
+            <div class="form-group">
+              <label>From</label>
+              <input type="text" id="system_from" name="system_from" placeholder="e.g., Main Switchboard">
             </div>
+            <div class="form-group">
+              <label>To</label>
+              <input type="text" id="system_to" name="system_to" placeholder="e.g., MCC-1">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Project Name</label>
+            <input type="text" id="project_name" name="project_name" placeholder="e.g., Building A Service Upgrade">
           </div>
 
           <div class="form-row">
@@ -168,6 +172,18 @@
               <label>Parallel Sets</label>
               <input type="number" id="num_parallels" name="num_parallels" value="1" min="1" max="4" step="1" inputmode="numeric" pattern="[0-9]*" required>
               <div class="field-hint">If > 1, each set is calculated separately and summed (Rule 4-029).</div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Installation Category <span class="required">*</span></label>
+            <select id="installation_type" name="installation_type" required>
+              <option value="cable">Cable</option>
+              <option value="raceway" selected>Single Conductors in Raceway</option>
+              <option value="free_air">Free Air</option>
+            </select>
+            <div class="field-hint">
+              Determines which CSA ampacity table is used and affects voltage drop calculations.
             </div>
           </div>
 
@@ -249,7 +265,7 @@
           </div>
 
           <div class="form-group">
-            <label>Ampacity Column</label>
+            <label>Termination temperature Basis</label>
             <select id="ampacity_col" name="ampacity_col">
               <option value="90">90°C</option>
               <option value="75" selected>75°C</option>
@@ -318,7 +334,8 @@
             ambient_temp_c: 30,
             ambient_temp_unit: "c",
             from: "",
-            to: ""
+            to: "",
+            project_name: ""
           },
           installation: {
             type: "cable",
@@ -334,7 +351,7 @@
           },
           code_basis: {
             csa_standard: "C22.1:24",
-            ampacity_col_c: 90,
+            ampacity_col_c: 75,
             special_notes: "",
             calculation_notes: ""
           }
@@ -410,6 +427,7 @@
           "ambient_temp_unit": ["system", "ambient_temp_unit"],
           "system_from": ["system", "from"],
           "system_to": ["system", "to"],
+          "project_name": ["system", "project_name"],
           "conductor_material": ["conductors", "material"],
           "num_conductors": ["conductors", "quantity"],
           "insulation_rating_c": ["conductors", "insulation_rating_c"],
@@ -669,6 +687,7 @@
   <h2>1) Initial Data</h2>
   <table>
     <tr><th>From</th><td>${this.form.system.from || "N/A"}</td><th>To</th><td>${this.form.system.to || "N/A"}</td></tr>
+    <tr><th>Project Name</th><td colspan="3">${this.form.system.project_name || "N/A"}</td></tr>
     <tr><th>Circuit</th><td>${this.form.circuit.type === "three_phase" ? "Three phase" : "Single phase"}</td><th>Source Voltage</th><td>${this.form.circuit.voltage_v} V</td></tr>
     <tr><th>Load Current</th><td>${this.form.circuit.current_a} A</td><th>Run Length</th><td>${this.form.circuit.run_length_m} ${this.form.circuit.run_length_unit} (${runLengthM.toFixed(2)} m)</td></tr>
     <tr><th>Max Voltage Drop</th><td>${this.form.circuit.max_voltage_drop_pct}%</td><th>Power Factor</th><td>${this.form.circuit.power_factor}</td></tr>
