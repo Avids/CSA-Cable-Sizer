@@ -159,7 +159,7 @@
 
             <div class="form-group">
               <label>Parallel Sets</label>
-              <input type="number" id="num_parallels" name="num_parallels" value="1" min="1" max="4" step="1" inputmode="numeric" pattern="[0-9]*" required>
+              <input type="number" id="num_parallels" name="num_parallels" value="1" min="1" step="1" inputmode="numeric" pattern="[0-9]*" required>
               <div class="field-hint">If > 1, each set is calculated separately and summed (Rule 4-029).</div>
             </div>
           </div>
@@ -509,68 +509,108 @@
         return true;
       }
 
+      awgDisplayFromAmpacitySize(size) {
+        return { "0": "1/0", "00": "2/0", "000": "3/0", "0000": "4/0" }[size] || size;
+      }
+
+      kTableSizeFromAmpacitySize(size) {
+        return { "0": "1/0", "00": "2/0", "000": "3/0", "0000": "4/0" }[size] || size;
+      }
+
       calculate() {
         console.log("Calculate called with form data:", this.form);
+
+        const material = this.form.conductors.material;
+        const installationType = this.form.installation.type;
         const selectedAmpacityColumn = this.form.code_basis.ampacity_col_c;
-        const parallelSets = Math.max(1, this.form.conductors.parallel_sets || 1);
+        const parallelSets = Math.max(1, Math.floor(this.form.conductors.parallel_sets || 1));
         const currentPerSet = this.form.circuit.current_a / parallelSets;
-        const recommendedAmpacitySizeKey = "000";
-        const recommendedVoltageDropSizeKey = "3/0";
-        const ampacityBase = getAmpacityFromTable(
-          recommendedAmpacitySizeKey,
-          this.form.conductors.material,
-          this.form.installation.type,
-          selectedAmpacityColumn
-        ) || 0;
-        const correctionFactor = getCorrectionFactorFromTable(
-          this.form.system.ambient_temp_c,
-          selectedAmpacityColumn
-        );
-        const ampacityAvailablePerSet = ampacityBase * correctionFactor;
-        const ampacityAvailableTotal = ampacityAvailablePerSet * parallelSets;
         const runLengthM = this.form.circuit.run_length_unit === "ft"
           ? this.form.circuit.run_length_m * 0.3048
           : this.form.circuit.run_length_m;
         const connectionFactor = this.form.circuit.type === "three_phase" ? 1.73 : 2;
-        const kValue = getKValueFromTable(
-          recommendedVoltageDropSizeKey,
-          this.form.conductors.material,
-          this.form.circuit.power_factor,
-          this.form.installation.type
+        const maxVoltageDropPct = this.form.circuit.max_voltage_drop_pct;
+        const correctionFactor = getCorrectionFactorFromTable(
+          this.form.system.ambient_temp_c,
+          selectedAmpacityColumn
         );
-        // CSA Table D3 voltage drop formula:
-        // VD = (K * f * I * L) / 1000
-        const voltageDropV = (kValue * connectionFactor * currentPerSet * runLengthM) / 1000;
-        const voltageDropPct = calculateVoltageDropPercent(voltageDropV, this.form.circuit.voltage_v);
 
-        // TODO: Implement full calculation logic:
-        // 1. Get correction factor from Table 5A
-        // 2. Iterate through conductor sizes
-        // 3. For each size, look up ampacity from CSA table
-        // 4. Apply correction factor
-        // 5. Check if ampacity >= required current
-        // 6. Get K value from Table D3
-        // 7. Calculate voltage drop
-        // 8. Check if voltage drop <= max allowed
-        // 9. Return first size that satisfies both constraints
+        const ampacityTable = installationType === "free_air"
+          ? (material === "copper" ? CSA_TABLE_1_COPPER_FREE_AIR : CSA_TABLE_3_ALUMINUM_FREE_AIR)
+          : (material === "copper" ? CSA_TABLE_2_COPPER_RACEWAY_CABLE : CSA_TABLE_4_ALUMINUM_RACEWAY_CABLE);
 
-        // PLACEHOLDER RESULTS
+        const kTable = CSA_TABLE_D3_VOLTAGE_DROP_K[material] || [];
+        const largestKRow = kTable[kTable.length - 1] || { size: "1000", dc: 0 };
+
+        let selected = null;
+
+        for (const row of ampacityTable) {
+          const ampacityBase = getAmpacityFromTable(row.size, material, installationType, selectedAmpacityColumn);
+          if (!ampacityBase) continue;
+
+          const ampacityAvailablePerSet = ampacityBase * correctionFactor;
+          const ampacityAvailableTotal = ampacityAvailablePerSet * parallelSets;
+          if (ampacityAvailableTotal < this.form.circuit.current_a) continue;
+
+          const kLookupSize = this.kTableSizeFromAmpacitySize(row.size);
+          let kValue = getKValueFromTable(
+            kLookupSize,
+            material,
+            this.form.circuit.power_factor,
+            installationType
+          );
+
+          if (!kValue && Number(row.size) > 1000) {
+            kValue = getKValueFromTable(
+              largestKRow.size,
+              material,
+              this.form.circuit.power_factor,
+              installationType
+            );
+          }
+
+          if (!kValue) continue;
+
+          const voltageDropV = (kValue * connectionFactor * currentPerSet * runLengthM) / 1000;
+          const voltageDropPct = calculateVoltageDropPercent(voltageDropV, this.form.circuit.voltage_v);
+
+          if (voltageDropPct <= maxVoltageDropPct) {
+            selected = {
+              size: row.size,
+              ampacityBase,
+              ampacityAvailablePerSet,
+              ampacityAvailableTotal,
+              kValue,
+              voltageDropV,
+              voltageDropPct
+            };
+            break;
+          }
+        }
+
+        if (!selected) {
+          alert("No conductor size satisfies both ampacity and voltage drop with current inputs. Try increasing parallel sets or max voltage drop, or reducing run length.");
+          return;
+        }
+
+        const displaySize = this.awgDisplayFromAmpacitySize(selected.size);
+
         this.results = {
           csa_table_ref: document.getElementById("csa_table_ref").value,
-          recommended_size_awg: "3/0 AWG",
-          recommended_size_display: `${parallelSets} × 3/0 AWG per phase`,
+          recommended_size_awg: `${displaySize} AWG`,
+          recommended_size_display: `${parallelSets} × ${displaySize} AWG per phase`,
           parallel_sets: parallelSets,
           current_per_set_a: currentPerSet,
-          ampacity_base: ampacityBase,
+          ampacity_base: selected.ampacityBase,
           correction_factor: correctionFactor,
-          ampacity_available_per_set_a: ampacityAvailablePerSet,
-          ampacity_available_a: ampacityAvailableTotal,
-          voltage_drop_k_value: kValue,
+          ampacity_available_per_set_a: selected.ampacityAvailablePerSet,
+          ampacity_available_a: selected.ampacityAvailableTotal,
+          voltage_drop_k_value: selected.kValue,
           voltage_drop_factor_f: connectionFactor,
-          voltage_drop_v: voltageDropV,
-          voltage_drop_pct: voltageDropPct,
+          voltage_drop_v: selected.voltageDropV,
+          voltage_drop_pct: selected.voltageDropPct,
           bonding_size_awg: "8 AWG",
-          status: voltageDropPct <= this.form.circuit.max_voltage_drop_pct ? "PASS" : "FAIL"
+          status: selected.voltageDropPct <= maxVoltageDropPct ? "PASS" : "FAIL"
         };
       }
 
