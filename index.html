@@ -244,7 +244,7 @@
       <!-- BUTTONS -->
       <div class="form-actions">
         <button type="button" id="btn-calculate" class="btn-primary">Calculate</button>
-        <button type="button" id="btn-export-pdf" class="btn-secondary">Export to PDF</button>
+        <button type="button" id="btn-export-pdf" class="btn-secondary" disabled>Export to PDF</button>
         <button type="button" id="btn-export-json" class="btn-secondary">Save</button>
         <button type="button" id="btn-open-json" class="btn-secondary">Open</button>
         <button type="reset" class="btn-tertiary">Clear Form</button>
@@ -271,6 +271,7 @@
       constructor() {
         this.form = this.initializeForm();
         this.setupEventListeners();
+        this.updatePdfExportState();
       }
 
       initializeForm() {
@@ -317,6 +318,7 @@
         document.getElementById("installation_type").addEventListener("change", (e) => {
           this.form.installation.type = e.target.value;
           this.updateFieldVisibility();
+          this.markResultsStale();
         });
 
         // Keep parallel sets as whole numbers >= 1
@@ -345,6 +347,7 @@
             ? parseFloat(e.target.value)
             : e.target.value;
           this.updateFormValue(name, value);
+          this.markResultsStale();
         });
 
         // Calculate button
@@ -352,6 +355,7 @@
           if (!this.validate()) return;
           this.calculate();
           this.displayResults();
+          this.updatePdfExportState();
         });
 
         // Export button
@@ -366,6 +370,24 @@
 
         // Initialize visibility
         this.updateFieldVisibility();
+
+        // Reset should clear existing results and require re-calculation
+        document.getElementById("cable-form").addEventListener("reset", () => {
+          setTimeout(() => this.markResultsStale(), 0);
+        });
+      }
+
+      updatePdfExportState() {
+        const exportPdfButton = document.getElementById("btn-export-pdf");
+        if (!exportPdfButton) return;
+        exportPdfButton.disabled = !this.results;
+      }
+
+      markResultsStale() {
+        this.results = null;
+        document.getElementById("results-content").innerHTML = "";
+        document.getElementById("results-panel").classList.remove("visible");
+        this.updatePdfExportState();
       }
 
       updateFormValue(name, value) {
@@ -476,9 +498,7 @@
           code_basis: { ...defaultForm.code_basis, ...(payload.form.code_basis || {}) }
         };
         this.syncFormToInputs();
-        this.results = null;
-        document.getElementById("results-content").innerHTML = "";
-        document.getElementById("results-panel").classList.remove("visible");
+        this.markResultsStale();
       }
 
       updateCsaTableRef() {
