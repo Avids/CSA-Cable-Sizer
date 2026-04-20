@@ -9,17 +9,15 @@
 <body>
   <header class="app-header">
     <h1>Project Feeder List Builder</h1>
-    <p>Create, save, load, and export project feeder schedules.</p>
+    <p>Manage your feeder schedule and size conductors in the CSA cable sizing page.</p>
   </header>
 
   <main class="container">
     <section class="card">
       <h2>Project Details</h2>
-      <div class="grid two-col">
-        <div class="field">
-          <label for="project-name">Project Name <span class="required">*</span></label>
-          <input id="project-name" type="text" placeholder="e.g., Building A Expansion" required>
-        </div>
+      <div class="field">
+        <label for="project-name">Project Name <span class="required">*</span></label>
+        <input id="project-name" type="text" placeholder="e.g., Building A Expansion" required>
       </div>
     </section>
 
@@ -36,12 +34,9 @@
     </section>
 
     <section class="card">
-      <h2>Add Feeder</h2>
-      <div class="grid three-col">
-        <div class="field">
-          <label for="feeder-id">Feeder ID</label>
-          <input id="feeder-id" type="text" placeholder="e.g., F-001">
-        </div>
+      <h2>Add New Feeder</h2>
+      <p class="muted compact">Choose From/To from entered equipment names, then open cable sizing.</p>
+      <div class="grid two-col">
         <div class="field">
           <label for="from-equipment">From <span class="required">*</span></label>
           <select id="from-equipment"></select>
@@ -51,46 +46,7 @@
           <select id="to-equipment"></select>
         </div>
       </div>
-
-      <div class="grid three-col">
-        <div class="field">
-          <label for="voltage">Voltage (V)</label>
-          <input id="voltage" type="number" min="1" step="1" placeholder="600">
-        </div>
-        <div class="field">
-          <label for="current">Current (A)</label>
-          <input id="current" type="number" min="0" step="0.1" placeholder="250">
-        </div>
-        <div class="field">
-          <label for="phases">Phases</label>
-          <select id="phases">
-            <option value="1Ø">1Ø</option>
-            <option value="3Ø" selected>3Ø</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="grid three-col">
-        <div class="field">
-          <label for="conductor">Conductor</label>
-          <input id="conductor" type="text" placeholder="e.g., 3C #500 kcmil Cu + #1/0 G">
-        </div>
-        <div class="field">
-          <label for="length">Length (m)</label>
-          <input id="length" type="number" min="0" step="0.1" placeholder="95">
-        </div>
-        <div class="field">
-          <label for="conduit">Conduit / Install Method</label>
-          <input id="conduit" type="text" placeholder="e.g., 100 mm PVC, Tray">
-        </div>
-      </div>
-
-      <div class="field">
-        <label for="feeder-notes">Notes</label>
-        <textarea id="feeder-notes" rows="2" placeholder="Optional design or installation notes."></textarea>
-      </div>
-
-      <button id="btn-add-feeder" class="btn primary" type="button">Add Feeder to List</button>
+      <button id="btn-open-sizer" class="btn primary" type="button">Add Feeder (Open Cable Sizing)</button>
     </section>
 
     <section class="card">
@@ -102,17 +58,15 @@
         <table id="feeder-table">
           <thead>
             <tr>
-              <th>#</th>
               <th>Feeder ID</th>
               <th>From</th>
               <th>To</th>
               <th>V</th>
               <th>A</th>
-              <th>Phases</th>
-              <th>Conductor</th>
-              <th>Length (m)</th>
-              <th>Conduit</th>
-              <th>Notes</th>
+              <th>Conductor Size</th>
+              <th>Bonding Conductor</th>
+              <th>VD %</th>
+              <th>Status</th>
               <th>Action</th>
             </tr>
           </thead>

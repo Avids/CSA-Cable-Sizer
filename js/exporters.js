@@ -1,17 +1,15 @@
 (function () {
   function toRows(feeders) {
-    return feeders.map((feeder, index) => ({
-      "#": index + 1,
+    return feeders.map((feeder) => ({
       "Feeder ID": feeder.id,
       From: feeder.from,
       To: feeder.to,
       Voltage: feeder.voltage,
       Current: feeder.current,
-      Phases: feeder.phases,
-      Conductor: feeder.conductor,
-      "Length (m)": feeder.length,
-      Conduit: feeder.conduit,
-      Notes: feeder.notes
+      "Conductor Size": feeder.conductorSize,
+      "Bonding Conductor": feeder.bonding,
+      "Voltage Drop %": feeder.voltageDropPct,
+      Status: feeder.status
     }));
   }
 
@@ -26,19 +24,17 @@
 
     doc.autoTable({
       startY: 24,
-      head: [["#", "Feeder ID", "From", "To", "V", "A", "Ph", "Conductor", "Length (m)", "Conduit", "Notes"]],
+      head: [["Feeder ID", "From", "To", "V", "A", "Conductor Size", "Bonding", "VD %", "Status"]],
       body: rows.map((r) => [
-        r["#"],
         r["Feeder ID"],
         r.From,
         r.To,
         r.Voltage,
         r.Current,
-        r.Phases,
-        r.Conductor,
-        r["Length (m)"],
-        r.Conduit,
-        r.Notes
+        r["Conductor Size"],
+        r["Bonding Conductor"],
+        r["Voltage Drop %"],
+        r.Status
       ]),
       styles: { fontSize: 8 }
     });

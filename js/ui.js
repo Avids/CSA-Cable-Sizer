@@ -41,18 +41,19 @@
     feeders.forEach((feeder, index) => {
       const row = document.createElement("tr");
       row.innerHTML = `
-        <td>${index + 1}</td>
         <td>${escapeHtml(feeder.id)}</td>
         <td>${escapeHtml(feeder.from)}</td>
         <td>${escapeHtml(feeder.to)}</td>
         <td>${escapeHtml(feeder.voltage)}</td>
         <td>${escapeHtml(feeder.current)}</td>
-        <td>${escapeHtml(feeder.phases)}</td>
-        <td>${escapeHtml(feeder.conductor)}</td>
-        <td>${escapeHtml(feeder.length)}</td>
-        <td>${escapeHtml(feeder.conduit)}</td>
-        <td>${escapeHtml(feeder.notes)}</td>
-        <td><button class="btn" data-remove-index="${index}">Delete</button></td>
+        <td>${escapeHtml(feeder.conductorSize)}</td>
+        <td>${escapeHtml(feeder.bonding)}</td>
+        <td>${escapeHtml(feeder.voltageDropPct)}</td>
+        <td>${escapeHtml(feeder.status)}</td>
+        <td>
+          <button class="btn" data-edit-index="${index}">Edit</button>
+          <button class="btn" data-remove-index="${index}">Delete</button>
+        </td>
       `;
       tbody.appendChild(row);
     });
@@ -60,29 +61,14 @@
     byId("feeder-count").textContent = `${feeders.length} feeder${feeders.length === 1 ? "" : "s"}`;
   }
 
-  function clearFeederInputFields() {
-    ["feeder-id", "voltage", "current", "conductor", "length", "conduit", "feeder-notes"].forEach((id) => {
-      byId(id).value = "";
-    });
-    byId("phases").value = "3Ø";
-  }
-
   function syncProjectName(name) {
     byId("project-name").value = name || "";
   }
 
-  function readFeederFromInputs() {
+  function readFromToInputs() {
     return {
-      id: byId("feeder-id").value.trim(),
       from: byId("from-equipment").value,
-      to: byId("to-equipment").value,
-      voltage: byId("voltage").value.trim(),
-      current: byId("current").value.trim(),
-      phases: byId("phases").value,
-      conductor: byId("conductor").value.trim(),
-      length: byId("length").value.trim(),
-      conduit: byId("conduit").value.trim(),
-      notes: byId("feeder-notes").value.trim()
+      to: byId("to-equipment").value
     };
   }
 
@@ -100,8 +86,7 @@
     setStatus,
     renderEquipment,
     renderFeeders,
-    clearFeederInputFields,
     syncProjectName,
-    readFeederFromInputs
+    readFromToInputs
   };
 })();

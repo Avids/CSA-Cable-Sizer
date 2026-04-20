@@ -15,14 +15,10 @@
 
   function addEquipment(name) {
     const normalized = normalizeName(name);
-    if (!normalized) {
-      throw new Error("Equipment name is required.");
-    }
+    if (!normalized) throw new Error("Equipment name is required.");
 
     const exists = appState.equipment.some((item) => item.toLowerCase() === normalized.toLowerCase());
-    if (exists) {
-      throw new Error("Equipment already exists.");
-    }
+    if (exists) throw new Error("Equipment already exists.");
 
     appState.equipment.push(normalized);
   }
@@ -31,8 +27,23 @@
     appState.feeders.splice(index, 1);
   }
 
-  function addFeeder(feeder) {
-    appState.feeders.push({ ...feeder });
+  function addOrUpdateFeeder(feeder) {
+    const index = appState.feeders.findIndex((item) => item.id === feeder.id);
+    if (index >= 0) {
+      appState.feeders[index] = { ...feeder };
+    } else {
+      appState.feeders.push({ ...feeder });
+    }
+  }
+
+  function getNextFeederId() {
+    const maxNumber = appState.feeders.reduce((max, feeder) => {
+      const match = String(feeder.id || "").match(/^F(\d+)$/i);
+      if (!match) return max;
+      return Math.max(max, Number(match[1]));
+    }, 0);
+
+    return `F${String(maxNumber + 1).padStart(3, "0")}`;
   }
 
   function clearProject() {
@@ -68,8 +79,9 @@
     appState,
     setProjectName,
     addEquipment,
-    addFeeder,
+    addOrUpdateFeeder,
     removeFeeder,
+    getNextFeederId,
     clearProject,
     loadProject,
     getProjectData

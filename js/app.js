@@ -1,11 +1,25 @@
 (function () {
-  const { appState, setProjectName, addEquipment, addFeeder, removeFeeder, clearProject, loadProject, getProjectData } = window.FeederState;
-  const { byId, setStatus, renderEquipment, renderFeeders, clearFeederInputFields, syncProjectName, readFeederFromInputs } = window.FeederUI;
+  const {
+    appState,
+    setProjectName,
+    addEquipment,
+    addOrUpdateFeeder,
+    removeFeeder,
+    getNextFeederId,
+    clearProject,
+    loadProject,
+    getProjectData
+  } = window.FeederState;
+  const { byId, setStatus, renderEquipment, renderFeeders, syncProjectName, readFromToInputs } = window.FeederUI;
   const { downloadJson, triggerFileLoad } = window.FeederStorage;
   const { exportPdf, exportExcel } = window.FeederExporters;
 
+  const CONTEXT_KEY = "csaFeederEditorContext";
+  const RESULT_KEY = "csaFeederDraftResult";
+
   function init() {
     bindEvents();
+    consumeReturnedFeeder();
     renderAll();
   }
 
@@ -25,24 +39,25 @@
       }
     });
 
-    byId("btn-add-feeder").addEventListener("click", () => {
+    byId("btn-open-sizer").addEventListener("click", () => {
       try {
-        if (!appState.projectName) {
-          throw new Error("Please enter the project name first.");
-        }
-        if (appState.equipment.length < 2) {
-          throw new Error("Add at least two panel/equipment names before adding feeders.");
-        }
+        if (!appState.projectName) throw new Error("Please enter the project name first.");
+        if (appState.equipment.length < 2) throw new Error("Add at least two panel/equipment names before adding feeders.");
 
-        const feeder = readFeederFromInputs();
-        if (!feeder.from || !feeder.to) {
-          throw new Error("From and To are required.");
-        }
+        const endpoint = readFromToInputs();
+        if (!endpoint.from || !endpoint.to) throw new Error("From and To are required.");
 
-        addFeeder(feeder);
-        renderFeeders(appState.feeders);
-        clearFeederInputFields();
-        setStatus("Feeder added to project.");
+        const context = {
+          mode: "new",
+          projectName: appState.projectName,
+          equipment: [...appState.equipment],
+          feederId: getNextFeederId(),
+          from: endpoint.from,
+          to: endpoint.to
+        };
+
+        localStorage.setItem(CONTEXT_KEY, JSON.stringify(context));
+        window.location.href = "cable-sizing.html";
       } catch (error) {
         setStatus(error.message, true);
       }
@@ -51,12 +66,19 @@
     byId("feeder-tbody").addEventListener("click", (event) => {
       const target = event.target;
       if (!(target instanceof HTMLButtonElement)) return;
-      const index = Number(target.getAttribute("data-remove-index"));
-      if (!Number.isInteger(index)) return;
 
-      removeFeeder(index);
-      renderFeeders(appState.feeders);
-      setStatus("Feeder removed.");
+      const removeIndex = Number(target.getAttribute("data-remove-index"));
+      if (Number.isInteger(removeIndex)) {
+        removeFeeder(removeIndex);
+        renderFeeders(appState.feeders);
+        setStatus("Feeder removed.");
+        return;
+      }
+
+      const editIndex = Number(target.getAttribute("data-edit-index"));
+      if (Number.isInteger(editIndex)) {
+        openEditMode(editIndex);
+      }
     });
 
     byId("btn-save-project").addEventListener("click", () => {
@@ -110,9 +132,47 @@
     byId("btn-clear-project").addEventListener("click", () => {
       clearProject();
       renderAll();
-      clearFeederInputFields();
+      localStorage.removeItem(CONTEXT_KEY);
+      localStorage.removeItem(RESULT_KEY);
       setStatus("Project cleared.");
     });
+  }
+
+  function openEditMode(index) {
+    const feeder = appState.feeders[index];
+    if (!feeder) {
+      setStatus("Unable to find feeder for editing.", true);
+      return;
+    }
+
+    const context = {
+      mode: "edit",
+      projectName: appState.projectName,
+      equipment: [...appState.equipment],
+      feederId: feeder.id,
+      from: feeder.from,
+      to: feeder.to,
+      form: feeder.calcForm || null
+    };
+
+    localStorage.setItem(CONTEXT_KEY, JSON.stringify(context));
+    window.location.href = "cable-sizing.html";
+  }
+
+  function consumeReturnedFeeder() {
+    const raw = localStorage.getItem(RESULT_KEY);
+    if (!raw) return;
+
+    localStorage.removeItem(RESULT_KEY);
+
+    try {
+      const payload = JSON.parse(raw);
+      if (!payload || !payload.feeder) return;
+      addOrUpdateFeeder(payload.feeder);
+      setStatus(payload.mode === "edit" ? "Feeder updated from cable sizing page." : "Feeder added from cable sizing page.");
+    } catch (error) {
+      setStatus("Returned feeder data is invalid.", true);
+    }
   }
 
   function ensureExportReady() {

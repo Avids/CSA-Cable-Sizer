@@ -151,3 +151,5 @@ h2 { margin-top: 0; }
     grid-template-columns: 1fr;
   }
 }
+
+.compact { margin-top: 0; }
