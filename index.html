@@ -9,7 +9,7 @@
 <body>
   <header>
     <h1>Cable Sizing Calculator</h1>
-    <p>CSA C22.1:24 Edition | Conductor Ampacity & Voltage Drop</p>
+    <p>CSA C22.1:24 Edition | Conductor Ampacity & Voltage Drop | <span id="app-revision-label"></span></p>
   </header>
 
   <main>
@@ -272,9 +272,13 @@
   <script src="csa_tables.js"></script>
   <script src="bonding.js"></script>
   <script>
+    const APP_REVISION = "Rev 1.1";
+
     // ===== FORM CONTROLLER =====
     class CableSelectionController {
       constructor() {
+        const revisionLabel = document.getElementById("app-revision-label");
+        if (revisionLabel) revisionLabel.textContent = APP_REVISION;
         this.form = this.initializeForm();
         this.setupEventListeners();
         this.updatePdfExportState();
@@ -784,7 +788,7 @@
 <body>
   <h1>CSA Cable Sizing Calculation Report</h1>
   <div class="meta">
-    Generated: ${now.toLocaleString()} | Standard: CSA ${this.form.code_basis.csa_standard}
+    Generated: ${now.toLocaleString()} | Standard: CSA ${this.form.code_basis.csa_standard} | ${APP_REVISION}
   </div>
 
   <h2>1) Initial Data</h2>
@@ -891,6 +895,7 @@
         const exportPayload = {
           generated_at: new Date().toISOString(),
           app: "CSA Cable Sizing",
+          app_revision: APP_REVISION,
           form: this.form,
           results: this.results
         };
