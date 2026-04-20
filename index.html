@@ -782,7 +782,6 @@
   </table>
 
   <h2>4) Results Summary</h2>
-  <p><strong>Results for Minimum Conductor Size Calculation</strong></p>
   <p>
     ${this.results.parallel_sets} conductor(s) per phase utilizing a ${this.results.recommended_size_awg.replace(" AWG", "")} ${this.form.conductors.material} conductor installed
     ${this.form.installation.type === "raceway" ? "in raceway" : this.form.installation.type}
@@ -808,6 +807,7 @@
 
   <div class="disclaimer">
     <strong>Disclaimer:</strong> This report is an engineering aid generated from user-provided inputs and simplified sizing logic.
+    The reported conductor size is a compliant minimum and is not an optimized result.
     It is not a substitute for sealed engineering design, field verification, equipment manufacturer requirements,
     or the latest adopted electrical code and authority having jurisdiction (AHJ) directives.
   </div>
