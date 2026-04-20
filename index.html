@@ -803,15 +803,7 @@
     <tr><th>Limit / Status</th><td>Allowed ≤ ${this.form.circuit.max_voltage_drop_pct}% | <span class="${this.results.status === "PASS" ? "status-pass" : "status-fail"}">${this.results.status}</span></td></tr>
   </table>
 
-  <h2>4) Results Summary</h2>
-  <p>
-    ${this.results.parallel_sets} conductor(s) per phase utilizing a ${this.results.recommended_size_awg.replace(" AWG", "")} ${this.form.conductors.material} conductor installed
-    ${this.form.installation.type === "raceway" ? "in raceway" : this.form.installation.type}
-    will limit the voltage drop to ${this.results.voltage_drop_pct.toFixed(2)}% or less when supplying ${this.form.circuit.current_a} amps
-    for ${this.form.circuit.run_length_m} ${this.form.circuit.run_length_unit} on a ${this.form.circuit.voltage_v} volt ${this.form.circuit.type === "three_phase" ? "three phase" : "single phase"} system.
-  </p>
-
-  <h2>5) Assumptions & Notes</h2>
+  <h2>4) Assumptions & Notes</h2>
   <div class="grid-2">
     <div>
       <strong>Assumptions</strong>
