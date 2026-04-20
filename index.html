@@ -36,12 +36,21 @@
             <label>Source Voltage <span class="required">*</span>
               <span class="info-icon" title="The voltage at the electrical service or distribution point">?</span>
             </label>
-            <input type="number" id="voltage_v" name="voltage_v" value="600" min="1" max="99999" required>
-            <div class="field-hint">e.g., 120, 240, 347, 480, 600 volts</div>
+            <select id="voltage_v" name="voltage_v" required>
+              <option value="120">120 V</option>
+              <option value="208">208 V</option>
+              <option value="240">240 V</option>
+              <option value="277">277 V</option>
+              <option value="347">347 V</option>
+              <option value="416">416 V</option>
+              <option value="480">480 V</option>
+              <option value="600" selected>600 V</option>
+            </select>
+            <div class="field-hint">Standard voltages: 120, 208, 240, 277, 347, 416, 480, or 600 V.</div>
           </div>
 
           <div class="form-group">
-            <label>Load Current <span class="required">*</span>
+            <label>Current at end of cable run (Amps) <span class="required">*</span>
               <span class="info-icon" title="Steady-state amperage at full load">?</span>
             </label>
             <input type="number" id="current_a" name="current_a" value="200" min="0.1" max="10000" step="0.1" required>
@@ -376,7 +385,9 @@
         // Update form on any input change
         document.getElementById("cable-form").addEventListener("change", (e) => {
           const name = e.target.name;
-          const value = e.target.type === "number" ? parseFloat(e.target.value) : e.target.value;
+          const value = e.target.type === "number" || e.target.name === "voltage_v"
+            ? parseFloat(e.target.value)
+            : e.target.value;
           this.updateFormValue(name, value);
         });
 
@@ -482,7 +493,10 @@
 
         // Required fields
         if (!this.form.circuit.type) errors.push("Circuit configuration required");
-        if (this.form.circuit.voltage_v <= 0) errors.push("Voltage must be > 0");
+        const allowedVoltages = [120, 208, 240, 277, 347, 416, 480, 600];
+        if (!allowedVoltages.includes(this.form.circuit.voltage_v)) {
+          errors.push("Voltage must be one of: 120, 208, 240, 277, 347, 416, 480, or 600 V");
+        }
         if (this.form.circuit.current_a <= 0) errors.push("Current must be > 0");
         if (!this.form.conductors.material) errors.push("Conductor material required");
         if (!this.form.installation.type) errors.push("Installation type required");
@@ -628,7 +642,7 @@
             <div class="result-value">${this.results.ampacity_available_a.toFixed(1)} A total (${this.results.ampacity_available_per_set_a.toFixed(1)} A per set × ${this.results.parallel_sets})</div>
           </div>
           <div class="result-row">
-            <div class="result-label">Load Current</div>
+            <div class="result-label">Current at end of cable run (Amps)</div>
             <div class="result-value">${this.form.circuit.current_a} A total (${this.results.current_per_set_a.toFixed(1)} A per set, margin: ${(this.results.ampacity_available_a - this.form.circuit.current_a).toFixed(1)} A)</div>
           </div>
           <div class="result-row">
@@ -718,7 +732,7 @@
     <tr><th>From</th><td>${this.form.system.from || "N/A"}</td><th>To</th><td>${this.form.system.to || "N/A"}</td></tr>
     <tr><th>Project Name</th><td colspan="3">${this.form.system.project_name || "N/A"}</td></tr>
     <tr><th>Circuit</th><td>${this.form.circuit.type === "three_phase" ? "Three phase" : "Single phase"}</td><th>Source Voltage</th><td>${this.form.circuit.voltage_v} V</td></tr>
-    <tr><th>Load Current</th><td>${this.form.circuit.current_a} A</td><th>Run Length</th><td>${this.form.circuit.run_length_m} ${this.form.circuit.run_length_unit} (${runLengthM.toFixed(2)} m)</td></tr>
+    <tr><th>Current at end of cable run (Amps)</th><td>${this.form.circuit.current_a} A</td><th>Run Length</th><td>${this.form.circuit.run_length_m} ${this.form.circuit.run_length_unit} (${runLengthM.toFixed(2)} m)</td></tr>
     <tr><th>Max Voltage Drop</th><td>${this.form.circuit.max_voltage_drop_pct}%</td><th>Power Factor</th><td>${this.form.circuit.power_factor}</td></tr>
     <tr><th>Conductor</th><td>${this.form.conductors.material}, ${this.form.conductors.quantity} conductors, ${this.form.conductors.parallel_sets} parallel set(s)</td><th>Conductor Insulation Rating</th><td>${this.form.conductors.insulation_rating_c}°C</td></tr>
     <tr><th>Ambient</th><td>${this.form.system.ambient_temp_c}°${this.form.system.ambient_temp_unit.toUpperCase()}</td><th>Installation</th><td>${this.form.installation.type} (${this.formatInstallationDetails()})</td></tr>
