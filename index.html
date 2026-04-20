@@ -87,17 +87,22 @@
           <div class="form-row">
             <div class="form-group">
               <label>Ambient Temp. <span class="required">*</span>
-                <span class="info-icon" title="Temperature around the conductors when fully loaded. Default 30°C per CSA.">?</span>
+                <span class="info-icon" title="Temperature around the conductors when fully loaded.">?</span>
               </label>
-              <input type="number" id="ambient_temp_c" name="ambient_temp_c" value="30" min="0" max="150" required>
-              <div class="field-hint">Celsius. Higher temps reduce ampacity (Table 5A).</div>
-            </div>
-            <div class="form-group">
-              <label>Temp. Unit</label>
-              <select id="ambient_temp_unit" name="ambient_temp_unit">
-                <option value="c" selected>°C</option>
-                <option value="f">°F</option>
+              <select id="ambient_temp_c" name="ambient_temp_c" required>
+                <option value="35" selected>35°C</option>
+                <option value="40">40°C</option>
+                <option value="45">45°C</option>
+                <option value="50">50°C</option>
+                <option value="55">55°C</option>
+                <option value="60">60°C</option>
+                <option value="65">65°C</option>
+                <option value="70">70°C</option>
+                <option value="75">75°C</option>
+                <option value="80">80°C</option>
+                <option value="90">90°C</option>
               </select>
+              <div class="field-hint">Celsius only. Higher temps reduce ampacity (Table 5A).</div>
             </div>
           </div>
 
@@ -287,8 +292,7 @@
             power_factor: 0.9
           },
           system: {
-            ambient_temp_c: 30,
-            ambient_temp_unit: "c",
+            ambient_temp_c: 35,
             from: "",
             to: "",
             project_name: "",
@@ -343,7 +347,7 @@
         // Update form on any input change
         document.getElementById("cable-form").addEventListener("change", (e) => {
           const name = e.target.name;
-          const value = e.target.type === "number" || e.target.name === "voltage_v"
+          const value = e.target.type === "number" || ["voltage_v", "ambient_temp_c"].includes(e.target.name)
             ? parseFloat(e.target.value)
             : e.target.value;
           this.updateFormValue(name, value);
@@ -402,7 +406,6 @@
           "load_type": ["circuit", "load_type"],
           "power_factor": ["circuit", "power_factor"],
           "ambient_temp_c": ["system", "ambient_temp_c"],
-          "ambient_temp_unit": ["system", "ambient_temp_unit"],
           "system_from": ["system", "from"],
           "system_to": ["system", "to"],
           "project_name": ["system", "project_name"],
@@ -453,7 +456,6 @@
           max_voltage_drop_pct: this.form.circuit.max_voltage_drop_pct,
           power_factor: this.form.circuit.power_factor,
           ambient_temp_c: this.form.system.ambient_temp_c,
-          ambient_temp_unit: this.form.system.ambient_temp_unit,
           system_from: this.form.system.from,
           system_to: this.form.system.to,
           project_name: this.form.system.project_name,
@@ -777,7 +779,7 @@
     <tr><th>Current at end of cable run (Amps)</th><td>${this.form.circuit.current_a} A</td><th>Run Length</th><td>${this.form.circuit.run_length_m} ${this.form.circuit.run_length_unit} (${runLengthM.toFixed(2)} m)</td></tr>
     <tr><th>Max Voltage Drop</th><td>${this.form.circuit.max_voltage_drop_pct}%</td><th>Power Factor</th><td>${this.form.circuit.power_factor}</td></tr>
     <tr><th>Conductor</th><td>${this.form.conductors.material}, ${this.form.conductors.quantity} conductors, ${this.form.conductors.parallel_sets} parallel set(s)</td><th>Conductor Insulation Rating</th><td>${this.form.conductors.insulation_rating_c}°C</td></tr>
-    <tr><th>Ambient</th><td>${this.form.system.ambient_temp_c}°${this.form.system.ambient_temp_unit.toUpperCase()}</td><th>Installation</th><td>${this.form.installation.type} (${this.formatInstallationDetails()})</td></tr>
+    <tr><th>Ambient</th><td>${this.form.system.ambient_temp_c}°C</td><th>Installation</th><td>${this.form.installation.type} (${this.formatInstallationDetails()})</td></tr>
     <tr><th>OCP rating type</th><td>${this.form.system.ocp_rating_type}%</td><th>OCP Rating</th><td>${this.form.system.ocp_rating_a || "N/A"} A</td></tr>
   </table>
 
