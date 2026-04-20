@@ -324,6 +324,7 @@
 
   <!-- SCRIPTS -->
   <script src="csa_tables.js"></script>
+  <script src="bonding.js"></script>
   <script>
     // ===== FORM CONTROLLER =====
     class CableSelectionController {
@@ -714,7 +715,7 @@
           voltage_drop_factor_f: connectionFactor,
           voltage_drop_v: selected.voltageDropV,
           voltage_drop_pct: selected.voltageDropPct,
-          bonding_size_awg: "8 AWG",
+          bonding: getBondingFromTable16ByOcp(this.form.system.ocp_rating_a, material),
           status: selected.voltageDropPct <= maxVoltageDropPct ? "PASS" : "FAIL"
         };
       }
@@ -760,6 +761,12 @@
             <div class="result-label">Temperature Correction</div>
             <div class="result-value">${this.results.correction_factor.toFixed(3)} (from Table 5A)</div>
           </div>
+          <div class="result-row">
+            <div class="result-label">Bonding (Rule 10-616 / Table 16)</div>
+            <div class="result-value">${this.results.bonding.applicable
+              ? `${this.results.bonding.wireSize} (${this.results.bonding.wireMaterial} wire), bus equivalent ${this.results.bonding.busSizeMm2.toFixed(1)} mm² @ OCP ${this.results.bonding.ocpRatingA} A`
+              : this.results.bonding.reason}</div>
+          </div>
         `;
 
         resultsContent.innerHTML = html;
@@ -791,7 +798,8 @@
           `Ambient correction factor ${this.results.correction_factor.toFixed(3)} applied to base ampacity.`,
           this.form.installation.type === "free_air"
             ? "Free-air installation uses cable-equivalent K value approximation from Table D3."
-            : "Voltage drop K value selected from Table D3 based on installation method and power factor."
+            : "Voltage drop K value selected from Table D3 based on installation method and power factor.",
+          "Bonding conductor sizing uses CSA Rule 10-616 / Table 16 only when OCP Rating is entered; service bonding conductor sizing is excluded."
         ];
 
         return `
@@ -855,7 +863,16 @@
     <tr><th>Limit / Status</th><td>Allowed ≤ ${this.form.circuit.max_voltage_drop_pct}% | <span class="${this.results.status === "PASS" ? "status-pass" : "status-fail"}">${this.results.status}</span></td></tr>
   </table>
 
-  <h2>4) Assumptions & Notes</h2>
+  <h2>4) Results Summary</h2>
+  <p><strong>Results for Minimum Conductor Size Calculation</strong></p>
+  <p>
+    ${this.results.parallel_sets} conductor(s) per phase utilizing a ${this.results.recommended_size_awg.replace(" AWG", "")} ${this.form.conductors.material} conductor installed
+    ${this.form.installation.type === "raceway" ? `${this.form.installation.raceway.raceway_type || "raceway"} conduit` : this.form.installation.type}
+    will limit the voltage drop to ${this.results.voltage_drop_pct.toFixed(2)}% or less when supplying ${this.form.circuit.current_a} amps
+    for ${this.form.circuit.run_length_m} ${this.form.circuit.run_length_unit} on a ${this.form.circuit.voltage_v} volt ${this.form.circuit.type === "three_phase" ? "three phase" : "single phase"} system.
+  </p>
+
+  <h2>5) Assumptions & Notes</h2>
   <div class="grid-2">
     <div>
       <strong>Assumptions</strong>
@@ -866,7 +883,8 @@
       <ul>
         <li>Special conditions: ${this.form.code_basis.special_notes || "None provided."}</li>
         <li>Calculation notes: ${this.form.code_basis.calculation_notes || "None provided."}</li>
-        <li>Bonding conductor (placeholder): ${this.results.bonding_size_awg}</li>
+        <li>Bonding conductor (Rule 10-616 / Table 16): ${this.results.bonding.applicable ? `${this.results.bonding.wireSize} (${this.results.bonding.wireMaterial} wire) at OCP ${this.results.bonding.ocpRatingA} A` : this.results.bonding.reason}</li>
+        <li>Note: Service bonding conductor sizing is excluded from this calculator output.</li>
       </ul>
     </div>
   </div>
