@@ -50,7 +50,7 @@
           </div>
 
           <div class="form-group">
-            <label>Load Current <span class="required">*</span>
+            <label>Current at end of cable run <span class="required">*</span>
               <span class="info-icon" title="Continuous amperage at full load">?</span>
             </label>
             <input type="number" id="current_a" name="current_a" value="200" min="0.1" max="10000" step="0.1" required>
@@ -651,7 +651,7 @@
             <div class="result-value">${this.results.required_ampacity_a.toFixed(1)} A (Load ${this.form.circuit.current_a} A ÷ ${this.results.ocp_loading_factor.toFixed(2)})</div>
           </div>
           <div class="result-row">
-            <div class="result-label">Load Current</div>
+            <div class="result-label">Current at end of cable run</div>
             <div class="result-value">${this.form.circuit.current_a} A total (${this.results.current_per_set_a.toFixed(1)} A per set, margin: ${(this.results.ampacity_available_a - this.results.required_ampacity_a).toFixed(1)} A vs required ampacity)</div>
           </div>
           <div class="result-row">
@@ -727,7 +727,9 @@
     .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 14px; }
     table { width: 100%; border-collapse: collapse; }
     th, td { border: 1px solid #d7d7d7; padding: 4px 6px; vertical-align: top; }
-    th { background: #f4f4f4; text-align: left; width: 33%; }
+    th { background: #f4f4f4; text-align: left; }
+    .initial-data-table th,
+    .initial-data-table td { width: 25%; }
     .status-pass { color: #0a7a1e; font-weight: bold; }
     .status-fail { color: #b11111; font-weight: bold; }
     ul { margin: 5px 0 0 16px; padding: 0; }
@@ -742,7 +744,13 @@
   </div>
 
   <h2>1) Initial Data</h2>
-  <table>
+  <table class="initial-data-table">
+    <colgroup>
+      <col style="width:25%">
+      <col style="width:25%">
+      <col style="width:25%">
+      <col style="width:25%">
+    </colgroup>
     <tr><th>From</th><td>${this.form.system.from || "N/A"}</td><th>To</th><td>${this.form.system.to || "N/A"}</td></tr>
     <tr><th>Project Name</th><td colspan="3">${this.form.system.project_name || "N/A"}</td></tr>
     <tr><th>Circuit</th><td>${this.form.circuit.type === "three_phase" ? "Three phase" : "Single phase"}</td><th>Source Voltage</th><td>${this.form.circuit.voltage_v} V</td></tr>
@@ -774,7 +782,6 @@
   </table>
 
   <h2>4) Results Summary</h2>
-  <p><strong>Results for Minimum Conductor Size Calculation</strong></p>
   <p>
     ${this.results.parallel_sets} conductor(s) per phase utilizing a ${this.results.recommended_size_awg.replace(" AWG", "")} ${this.form.conductors.material} conductor installed
     ${this.form.installation.type === "raceway" ? "in raceway" : this.form.installation.type}
@@ -800,6 +807,7 @@
 
   <div class="disclaimer">
     <strong>Disclaimer:</strong> This report is an engineering aid generated from user-provided inputs and simplified sizing logic.
+    The reported conductor size is a compliant minimum and is not an optimized result.
     It is not a substitute for sealed engineering design, field verification, equipment manufacturer requirements,
     or the latest adopted electrical code and authority having jurisdiction (AHJ) directives.
   </div>
