@@ -50,8 +50,8 @@
           </div>
 
           <div class="form-group">
-            <label>Current at end of cable run (Amps) <span class="required">*</span>
-              <span class="info-icon" title="Steady-state amperage at full load">?</span>
+            <label>Load Current <span class="required">*</span>
+              <span class="info-icon" title="Continuous amperage at full load">?</span>
             </label>
             <input type="number" id="current_a" name="current_a" value="200" min="0.1" max="10000" step="0.1" required>
             <div class="field-hint">Amperes at the point of load. Use nameplate rating or calculated load.</div>
@@ -123,6 +123,21 @@
           <div class="form-group">
             <label>Project Name</label>
             <input type="text" id="project_name" name="project_name" placeholder="e.g., Building A Service Upgrade">
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>OCP rating type <span class="required">*</span></label>
+              <select id="ocp_rating_type" name="ocp_rating_type" required>
+                <option value="80" selected>80%</option>
+                <option value="100">100%</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>OCP Rating (A)</label>
+              <input type="number" id="ocp_rating_a" name="ocp_rating_a" min="1" step="1" placeholder="e.g., 600">
+              <div class="field-hint">Overcurrent protection device rating in amperes.</div>
+            </div>
           </div>
         </fieldset>
       </div>
@@ -291,6 +306,7 @@
         <button type="button" id="btn-calculate" class="btn-primary">Calculate</button>
         <button type="button" id="btn-export-pdf" class="btn-secondary">Export to PDF</button>
         <button type="button" id="btn-export-json" class="btn-secondary">Save</button>
+        <button type="button" id="btn-open-json" class="btn-secondary">Open</button>
         <button type="reset" class="btn-tertiary">Clear Form</button>
       </div>
     </form>
@@ -333,7 +349,9 @@
             ambient_temp_unit: "c",
             from: "",
             to: "",
-            project_name: ""
+            project_name: "",
+            ocp_rating_type: "80",
+            ocp_rating_a: null
           },
           installation: {
             type: "cable",
@@ -428,6 +446,8 @@
           "system_from": ["system", "from"],
           "system_to": ["system", "to"],
           "project_name": ["system", "project_name"],
+          "ocp_rating_type": ["system", "ocp_rating_type"],
+          "ocp_rating_a": ["system", "ocp_rating_a"],
           "conductor_material": ["conductors", "material"],
           "num_conductors": ["conductors", "quantity"],
           "insulation_rating_c": ["conductors", "insulation_rating_c"],
@@ -472,6 +492,73 @@
 
         // Update CSA table reference
         this.updateCsaTableRef();
+      }
+
+      syncFormToInputs() {
+        const fieldValues = {
+          circuit_type: this.form.circuit.type,
+          voltage_v: this.form.circuit.voltage_v,
+          current_a: this.form.circuit.current_a,
+          run_length: this.form.circuit.run_length_m,
+          run_length_unit: this.form.circuit.run_length_unit,
+          max_voltage_drop_pct: this.form.circuit.max_voltage_drop_pct,
+          power_factor: this.form.circuit.power_factor,
+          ambient_temp_c: this.form.system.ambient_temp_c,
+          ambient_temp_unit: this.form.system.ambient_temp_unit,
+          system_from: this.form.system.from,
+          system_to: this.form.system.to,
+          project_name: this.form.system.project_name,
+          ocp_rating_type: this.form.system.ocp_rating_type || "80",
+          ocp_rating_a: this.form.system.ocp_rating_a ?? "",
+          conductor_material: this.form.conductors.material,
+          num_conductors: this.form.conductors.quantity,
+          insulation_rating_c: this.form.conductors.insulation_rating_c,
+          num_parallels: this.form.conductors.parallel_sets,
+          installation_type: this.form.installation.type,
+          cable_type: this.form.installation.cable.cable_type,
+          raceway_type: this.form.installation.raceway.raceway_type,
+          conductors_in_run: this.form.installation.raceway.conductors_in_run,
+          free_air_mounting: this.form.installation.free_air.mounting,
+          surface_contact: this.form.installation.free_air.surface_contact,
+          ampacity_col: this.form.code_basis.ampacity_col_c,
+          special_notes: this.form.code_basis.special_notes,
+          calculation_notes: this.form.code_basis.calculation_notes
+        };
+
+        Object.entries(fieldValues).forEach(([id, value]) => {
+          const element = document.getElementById(id);
+          if (!element) return;
+          element.value = value ?? "";
+        });
+
+        this.updateFieldVisibility();
+      }
+
+      loadSavedJob(payload) {
+        if (!payload || typeof payload !== "object" || !payload.form) {
+          throw new Error("Invalid saved job format. Expected an object containing a 'form' property.");
+        }
+
+        const defaultForm = this.initializeForm();
+        this.form = {
+          ...defaultForm,
+          ...payload.form,
+          circuit: { ...defaultForm.circuit, ...(payload.form.circuit || {}) },
+          system: { ...defaultForm.system, ...(payload.form.system || {}) },
+          installation: {
+            ...defaultForm.installation,
+            ...(payload.form.installation || {}),
+            cable: { ...defaultForm.installation.cable, ...(payload.form.installation?.cable || {}) },
+            raceway: { ...defaultForm.installation.raceway, ...(payload.form.installation?.raceway || {}) },
+            free_air: { ...defaultForm.installation.free_air, ...(payload.form.installation?.free_air || {}) }
+          },
+          conductors: { ...defaultForm.conductors, ...(payload.form.conductors || {}) },
+          code_basis: { ...defaultForm.code_basis, ...(payload.form.code_basis || {}) }
+        };
+        this.syncFormToInputs();
+        this.results = null;
+        document.getElementById("results-content").innerHTML = "";
+        document.getElementById("results-panel").classList.remove("visible");
       }
 
       updateCsaTableRef() {
@@ -548,6 +635,8 @@
           this.form.system.ambient_temp_c,
           selectedAmpacityColumn
         );
+        const ocpLoadingFactor = this.form.system.ocp_rating_type === "100" ? 1.0 : 0.8;
+        const requiredAmpacityTotal = this.form.circuit.current_a / ocpLoadingFactor;
 
         const ampacityTable = installationType === "free_air"
           ? (material === "copper" ? CSA_TABLE_1_COPPER_FREE_AIR : CSA_TABLE_3_ALUMINUM_FREE_AIR)
@@ -564,7 +653,7 @@
 
           const ampacityAvailablePerSet = ampacityBase * correctionFactor;
           const ampacityAvailableTotal = ampacityAvailablePerSet * parallelSets;
-          if (ampacityAvailableTotal < this.form.circuit.current_a) continue;
+          if (ampacityAvailableTotal < requiredAmpacityTotal) continue;
 
           const kLookupSize = this.kTableSizeFromAmpacitySize(row.size);
           let kValue = getKValueFromTable(
@@ -619,6 +708,8 @@
           correction_factor: correctionFactor,
           ampacity_available_per_set_a: selected.ampacityAvailablePerSet,
           ampacity_available_a: selected.ampacityAvailableTotal,
+          required_ampacity_a: requiredAmpacityTotal,
+          ocp_loading_factor: ocpLoadingFactor,
           voltage_drop_k_value: selected.kValue,
           voltage_drop_factor_f: connectionFactor,
           voltage_drop_v: selected.voltageDropV,
@@ -642,8 +733,12 @@
             <div class="result-value">${this.results.ampacity_available_a.toFixed(1)} A total (${this.results.ampacity_available_per_set_a.toFixed(1)} A per set × ${this.results.parallel_sets})</div>
           </div>
           <div class="result-row">
-            <div class="result-label">Current at end of cable run (Amps)</div>
-            <div class="result-value">${this.form.circuit.current_a} A total (${this.results.current_per_set_a.toFixed(1)} A per set, margin: ${(this.results.ampacity_available_a - this.form.circuit.current_a).toFixed(1)} A)</div>
+            <div class="result-label">Required Ampacity (CSA 8-104)</div>
+            <div class="result-value">${this.results.required_ampacity_a.toFixed(1)} A (Load ${this.form.circuit.current_a} A ÷ ${this.results.ocp_loading_factor.toFixed(2)})</div>
+          </div>
+          <div class="result-row">
+            <div class="result-label">Load Current</div>
+            <div class="result-value">${this.form.circuit.current_a} A total (${this.results.current_per_set_a.toFixed(1)} A per set, margin: ${(this.results.ampacity_available_a - this.results.required_ampacity_a).toFixed(1)} A vs required ampacity)</div>
           </div>
           <div class="result-row">
             <div class="result-label">Voltage Drop</div>
@@ -687,10 +782,11 @@
         const runLengthM = this.form.circuit.run_length_unit === "ft"
           ? this.form.circuit.run_length_m * 0.3048
           : this.form.circuit.run_length_m;
-        const ampacityMargin = this.results.ampacity_available_a - this.form.circuit.current_a;
+        const requiredAmpacityMargin = this.results.ampacity_available_a - this.results.required_ampacity_a;
         const assumptions = [
           `CSA ${this.form.code_basis.csa_standard} tables used (${this.results.csa_table_ref}, Table 5A, Table D3).`,
-          `Steady-state load assumed at ${this.form.circuit.current_a} A with power factor ${this.form.circuit.power_factor}.`,
+          `Continuous load assumed at ${this.form.circuit.current_a} A with power factor ${this.form.circuit.power_factor}.`,
+          `CSA Rule 8-104 OCP loading factor ${this.results.ocp_loading_factor.toFixed(2)} (${this.form.system.ocp_rating_type}%) applied to determine required conductor ampacity.`,
           `Connection factor f = ${this.results.voltage_drop_factor_f} based on ${this.form.circuit.type === "three_phase" ? "three-phase" : "single-phase"} circuit.`,
           `Ambient correction factor ${this.results.correction_factor.toFixed(3)} applied to base ampacity.`,
           this.form.installation.type === "free_air"
@@ -736,7 +832,7 @@
     <tr><th>Max Voltage Drop</th><td>${this.form.circuit.max_voltage_drop_pct}%</td><th>Power Factor</th><td>${this.form.circuit.power_factor}</td></tr>
     <tr><th>Conductor</th><td>${this.form.conductors.material}, ${this.form.conductors.quantity} conductors, ${this.form.conductors.parallel_sets} parallel set(s)</td><th>Conductor Insulation Rating</th><td>${this.form.conductors.insulation_rating_c}°C</td></tr>
     <tr><th>Ambient</th><td>${this.form.system.ambient_temp_c}°${this.form.system.ambient_temp_unit.toUpperCase()}</td><th>Installation</th><td>${this.form.installation.type} (${this.formatInstallationDetails()})</td></tr>
-    <tr><th>From</th><td>${this.form.system.from || "N/A"}</td><th>To</th><td>${this.form.system.to || "N/A"}</td></tr>
+    <tr><th>OCP rating type</th><td>${this.form.system.ocp_rating_type}%</td><th>OCP Rating</th><td>${this.form.system.ocp_rating_a || "N/A"} A</td></tr>
   </table>
 
   <h2>2) Wire Size & Ampacity Calculation</h2>
@@ -746,7 +842,8 @@
     <tr><th>Base Ampacity</th><td>${this.results.ampacity_base.toFixed(1)} A</td></tr>
     <tr><th>Temperature Correction (Table 5A)</th><td>${this.results.correction_factor.toFixed(3)}</td></tr>
     <tr><th>Available Ampacity</th><td>${this.results.ampacity_available_a.toFixed(1)} A total (${this.results.ampacity_available_per_set_a.toFixed(1)} A per set × ${this.results.parallel_sets})</td></tr>
-    <tr><th>Ampacity Margin</th><td>${ampacityMargin.toFixed(1)} A</td></tr>
+    <tr><th>Required Ampacity (CSA 8-104)</th><td>${this.results.required_ampacity_a.toFixed(1)} A (Load ${this.form.circuit.current_a} A ÷ ${this.results.ocp_loading_factor.toFixed(2)})</td></tr>
+    <tr><th>Ampacity Margin</th><td>${requiredAmpacityMargin.toFixed(1)} A vs required ampacity</td></tr>
     <tr><th>Selected Size</th><td><strong>${this.results.recommended_size_display}</strong></td></tr>
   </table>
 
@@ -838,8 +935,9 @@
 
     // Initialize controller on page load
     document.addEventListener("DOMContentLoaded", () => {
-      new CableSelectionController();
+      window.cableSelectionController = new CableSelectionController();
     });
   </script>
+  <script src="open_saved_job.js"></script>
 </body>
 </html>
