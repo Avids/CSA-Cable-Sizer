@@ -50,7 +50,7 @@
           </div>
 
           <div class="form-group">
-            <label>Load Current <span class="required">*</span>
+            <label>Current at end of cable run <span class="required">*</span>
               <span class="info-icon" title="Continuous amperage at full load">?</span>
             </label>
             <input type="number" id="current_a" name="current_a" value="200" min="0.1" max="10000" step="0.1" required>
@@ -191,8 +191,8 @@
           <div class="form-group">
             <label>Installation Category <span class="required">*</span></label>
             <select id="installation_type" name="installation_type" required>
-              <option value="cable" selected>Cable</option>
-              <option value="raceway">Single Conductors in Raceway</option>
+              <option value="cable" selected>Cable (TECK, ACWU, NMD, Direct Burial)</option>
+              <option value="raceway">Single Conductor in Raceway (EMT, PVC, Aluminum, GRC, RMC)</option>
               <option value="free_air">Free Air</option>
             </select>
             <div class="field-hint">
@@ -200,37 +200,8 @@
             </div>
           </div>
 
-          <!-- CONDITIONAL: IF CABLE -->
-          <div id="cable-details" class="hidden">
-            <div class="form-group">
-              <label>Cable Type <span class="required">*</span></label>
-              <select id="cable_type" name="cable_type">
-                <option value="">— Select —</option>
-                <option value="teck">TECK (steel-armored, general use)</option>
-                <option value="acwu">ACWU (armored, CU armor)</option>
-                <option value="nmd">NMD (nonmetallic, indoor residential)</option>
-                <option value="direct_burial">Direct Burial (underground)</option>
-              </select>
-              <div class="field-hint">
-                TECK = most common; rated for exposed and underground.
-                NMD = residential interior only.
-              </div>
-            </div>
-          </div>
-
           <!-- CONDITIONAL: IF RACEWAY -->
           <div id="raceway-details" class="hidden">
-            <div class="form-group">
-              <label>Raceway Type <span class="required">*</span></label>
-              <select id="raceway_type" name="raceway_type">
-                <option value="">— Select —</option>
-                <option value="steel">Steel Conduit (standard industrial)</option>
-                <option value="aluminum">Aluminum Conduit (lighter, corrosion-resistant)</option>
-                <option value="pvc">PVC Conduit (non-conductive, chemical resistant)</option>
-              </select>
-              <div class="field-hint">Choice affects voltage drop K value (Table D3).</div>
-            </div>
-
             <div class="form-group">
               <label>Total Conductors in Raceway <span class="required">*</span>
                 <span class="info-icon" title="Total number including all phases and current carrying neutral (single-phase or unbalanced 3-phase load). (Table 5C).">?</span>
@@ -240,31 +211,6 @@
             </div>
           </div>
 
-          <!-- CONDITIONAL: IF FREE AIR -->
-          <div id="free-air-details" class="hidden">
-            <div class="form-group">
-              <label>Mounting Configuration <span class="required">*</span></label>
-              <select id="free_air_mounting" name="free_air_mounting">
-                <option value="">— Select —</option>
-                <option value="single">Single (one conductor, free air)</option>
-                <option value="grouped">Grouped (multiple conductors touching)</option>
-                <option value="spaced">Spaced (multiple conductors separated)</option>
-                <option value="on_masonry">On Masonry (single on wall surface)</option>
-              </select>
-              <div class="field-hint">Table 1, Note 1: Surface mounting may increase ampacity.</div>
-            </div>
-
-            <div class="form-group">
-              <label>Surface Material</label>
-              <select id="surface_contact" name="surface_contact">
-                <option value="none">None (free air)</option>
-                <option value="masonry">Masonry or Plaster</option>
-                <option value="wood">Wood</option>
-                <option value="other">Other</option>
-              </select>
-              <div class="field-hint">If mounted on surface, specify material (affects thermal dissipation).</div>
-            </div>
-          </div>
         </fieldset>
 
         <!-- CODE BASIS -->
@@ -285,12 +231,6 @@
               <option value="60">60°C</option>
             </select>
             <div class="field-hint">Select the CSA ampacity column used for conductor ampacity lookup.</div>
-          </div>
-
-          <div class="form-group">
-            <label>Special Conditions / Deviations</label>
-            <textarea id="special_notes" name="special_notes" rows="2" placeholder="e.g., Rule 2-030 deviation, site-specific constraints"></textarea>
-            <div class="field-hint">Optional. Document any Rule deviations or special circumstances.</div>
           </div>
 
           <div class="form-group">
@@ -356,9 +296,7 @@
           },
           installation: {
             type: "cable",
-            cable: { cable_type: "teck" },
-            raceway: { raceway_type: "steel", conductors_in_run: 3 },
-            free_air: { mounting: "single", surface_contact: "none" }
+            raceway: { conductors_in_run: 3 }
           },
           conductors: {
             material: "copper",
@@ -369,7 +307,6 @@
           code_basis: {
             csa_standard: "C22.1:24",
             ampacity_col_c: 75,
-            special_notes: "",
             calculation_notes: ""
           }
         };
@@ -454,13 +391,8 @@
           "insulation_rating_c": ["conductors", "insulation_rating_c"],
           "num_parallels": ["conductors", "parallel_sets"],
           "installation_type": ["installation", "type"],
-          "cable_type": ["installation", "cable", "cable_type"],
-          "raceway_type": ["installation", "raceway", "raceway_type"],
           "conductors_in_run": ["installation", "raceway", "conductors_in_run"],
-          "free_air_mounting": ["installation", "free_air", "mounting"],
-          "surface_contact": ["installation", "free_air", "surface_contact"],
           "ampacity_col": ["code_basis", "ampacity_col_c"],
-          "special_notes": ["code_basis", "special_notes"],
           "calculation_notes": ["code_basis", "calculation_notes"]
         };
 
@@ -478,17 +410,11 @@
         const installationType = this.form.installation.type;
 
         // Hide all conditional sections
-        document.getElementById("cable-details").classList.add("hidden");
         document.getElementById("raceway-details").classList.add("hidden");
-        document.getElementById("free-air-details").classList.add("hidden");
 
         // Show appropriate section
-        if (installationType === "cable") {
-          document.getElementById("cable-details").classList.remove("hidden");
-        } else if (installationType === "raceway") {
+        if (installationType === "raceway") {
           document.getElementById("raceway-details").classList.remove("hidden");
-        } else if (installationType === "free_air") {
-          document.getElementById("free-air-details").classList.remove("hidden");
         }
 
         // Update CSA table reference
@@ -516,13 +442,8 @@
           insulation_rating_c: this.form.conductors.insulation_rating_c,
           num_parallels: this.form.conductors.parallel_sets,
           installation_type: this.form.installation.type,
-          cable_type: this.form.installation.cable.cable_type,
-          raceway_type: this.form.installation.raceway.raceway_type,
           conductors_in_run: this.form.installation.raceway.conductors_in_run,
-          free_air_mounting: this.form.installation.free_air.mounting,
-          surface_contact: this.form.installation.free_air.surface_contact,
           ampacity_col: this.form.code_basis.ampacity_col_c,
-          special_notes: this.form.code_basis.special_notes,
           calculation_notes: this.form.code_basis.calculation_notes
         };
 
@@ -549,9 +470,7 @@
           installation: {
             ...defaultForm.installation,
             ...(payload.form.installation || {}),
-            cable: { ...defaultForm.installation.cable, ...(payload.form.installation?.cable || {}) },
-            raceway: { ...defaultForm.installation.raceway, ...(payload.form.installation?.raceway || {}) },
-            free_air: { ...defaultForm.installation.free_air, ...(payload.form.installation?.free_air || {}) }
+            raceway: { ...defaultForm.installation.raceway, ...(payload.form.installation?.raceway || {}) }
           },
           conductors: { ...defaultForm.conductors, ...(payload.form.conductors || {}) },
           code_basis: { ...defaultForm.code_basis, ...(payload.form.code_basis || {}) }
@@ -593,14 +512,8 @@
         }
 
         // Conditional
-        if (this.form.installation.type === "cable" && !this.form.installation.cable.cable_type) {
-          errors.push("Cable type required");
-        }
-        if (this.form.installation.type === "raceway" && !this.form.installation.raceway.raceway_type) {
-          errors.push("Raceway type required");
-        }
-        if (this.form.installation.type === "free_air" && !this.form.installation.free_air.mounting) {
-          errors.push("Free air mounting required");
+        if (this.form.installation.type === "raceway" && (!Number.isFinite(this.form.installation.raceway.conductors_in_run) || this.form.installation.raceway.conductors_in_run < 1)) {
+          errors.push("Total conductors in raceway must be 1 or greater");
         }
 
         if (errors.length > 0) {
@@ -738,7 +651,7 @@
             <div class="result-value">${this.results.required_ampacity_a.toFixed(1)} A (Load ${this.form.circuit.current_a} A ÷ ${this.results.ocp_loading_factor.toFixed(2)})</div>
           </div>
           <div class="result-row">
-            <div class="result-label">Load Current</div>
+            <div class="result-label">Current at end of cable run</div>
             <div class="result-value">${this.form.circuit.current_a} A total (${this.results.current_per_set_a.toFixed(1)} A per set, margin: ${(this.results.ampacity_available_a - this.results.required_ampacity_a).toFixed(1)} A vs required ampacity)</div>
           </div>
           <div class="result-row">
@@ -776,12 +689,9 @@
       formatInstallationDetails() {
         const installationType = this.form.installation.type;
         if (installationType === "raceway") {
-          return `Raceway: ${this.form.installation.raceway.raceway_type || "N/A"}, Conductors in run: ${this.form.installation.raceway.conductors_in_run || "N/A"}`;
+          return `Conductors in run: ${this.form.installation.raceway.conductors_in_run || "N/A"}`;
         }
-        if (installationType === "cable") {
-          return `Cable type: ${this.form.installation.cable.cable_type || "N/A"}`;
-        }
-        return `Mounting: ${this.form.installation.free_air.mounting || "N/A"}, Surface: ${this.form.installation.free_air.surface_contact || "N/A"}`;
+        return "No additional installation selections required.";
       }
 
       generatePdfReportHtml() {
@@ -817,7 +727,9 @@
     .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 14px; }
     table { width: 100%; border-collapse: collapse; }
     th, td { border: 1px solid #d7d7d7; padding: 4px 6px; vertical-align: top; }
-    th { background: #f4f4f4; text-align: left; width: 33%; }
+    th { background: #f4f4f4; text-align: left; }
+    .initial-data-table th,
+    .initial-data-table td { width: 25%; }
     .status-pass { color: #0a7a1e; font-weight: bold; }
     .status-fail { color: #b11111; font-weight: bold; }
     ul { margin: 5px 0 0 16px; padding: 0; }
@@ -832,7 +744,13 @@
   </div>
 
   <h2>1) Initial Data</h2>
-  <table>
+  <table class="initial-data-table">
+    <colgroup>
+      <col style="width:25%">
+      <col style="width:25%">
+      <col style="width:25%">
+      <col style="width:25%">
+    </colgroup>
     <tr><th>From</th><td>${this.form.system.from || "N/A"}</td><th>To</th><td>${this.form.system.to || "N/A"}</td></tr>
     <tr><th>Project Name</th><td colspan="3">${this.form.system.project_name || "N/A"}</td></tr>
     <tr><th>Circuit</th><td>${this.form.circuit.type === "three_phase" ? "Three phase" : "Single phase"}</td><th>Source Voltage</th><td>${this.form.circuit.voltage_v} V</td></tr>
@@ -867,7 +785,7 @@
   <p><strong>Results for Minimum Conductor Size Calculation</strong></p>
   <p>
     ${this.results.parallel_sets} conductor(s) per phase utilizing a ${this.results.recommended_size_awg.replace(" AWG", "")} ${this.form.conductors.material} conductor installed
-    ${this.form.installation.type === "raceway" ? `${this.form.installation.raceway.raceway_type || "raceway"} conduit` : this.form.installation.type}
+    ${this.form.installation.type === "raceway" ? "in raceway" : this.form.installation.type}
     will limit the voltage drop to ${this.results.voltage_drop_pct.toFixed(2)}% or less when supplying ${this.form.circuit.current_a} amps
     for ${this.form.circuit.run_length_m} ${this.form.circuit.run_length_unit} on a ${this.form.circuit.voltage_v} volt ${this.form.circuit.type === "three_phase" ? "three phase" : "single phase"} system.
   </p>
@@ -881,7 +799,6 @@
     <div>
       <strong>Project Notes</strong>
       <ul>
-        <li>Special conditions: ${this.form.code_basis.special_notes || "None provided."}</li>
         <li>Calculation notes: ${this.form.code_basis.calculation_notes || "None provided."}</li>
         <li>Bonding conductor (Rule 10-616 / Table 16): ${this.results.bonding.applicable ? `${this.results.bonding.wireSize} (${this.results.bonding.wireMaterial} wire) at OCP ${this.results.bonding.ocpRatingA} A` : this.results.bonding.reason}</li>
         <li>Note: Service bonding conductor sizing is excluded from this calculator output.</li>
