@@ -939,8 +939,9 @@
           return;
         }
 
+        const pdfHtml = this.generatePdfReportHtml().replaceAll("Φ", "ph");
         reportWindow.document.open();
-        reportWindow.document.write(this.generatePdfReportHtml());
+        reportWindow.document.write(pdfHtml);
         reportWindow.document.close();
         reportWindow.document.title = "CSA Cable Sizing";
         try {
