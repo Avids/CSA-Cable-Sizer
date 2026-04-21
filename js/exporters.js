@@ -30,19 +30,19 @@
       startY: 24,
       head: [["Feeder ID", "From", "To", "V", "A", "Circuit Config", "Conductor Size", "Bonding", "Length", "Install", "Insul.", "VD %", "Status"]],
       body: rows.map((r) => [
-        r["Feeder ID"],
-        r.From,
-        r.To,
-        r.Voltage,
-        r.Current,
-        r["Circuit Configuration"],
-        r["Conductor Size"],
-        r["Bonding Conductor"],
-        r.Length,
-        r["Install Method"],
-        r.Insulation,
-        r["Voltage Drop %"],
-        r.Status
+        pdfSafeText(r["Feeder ID"]),
+        pdfSafeText(r.From),
+        pdfSafeText(r.To),
+        pdfSafeText(r.Voltage),
+        pdfSafeText(r.Current),
+        pdfSafeText(r["Circuit Configuration"]),
+        pdfSafeText(r["Conductor Size"]),
+        pdfSafeText(r["Bonding Conductor"]),
+        pdfSafeText(r.Length),
+        pdfSafeText(r["Install Method"]),
+        pdfSafeText(r.Insulation),
+        pdfSafeText(r["Voltage Drop %"]),
+        pdfSafeText(r.Status)
       ]),
       styles: { fontSize: 8 }
     });
@@ -63,6 +63,10 @@
       .trim()
       .replace(/[^a-z0-9-_]+/gi, "_")
       .replace(/^_+|_+$/g, "");
+  }
+
+  function pdfSafeText(value) {
+    return String(value ?? "").replaceAll("Φ", "ph");
   }
 
   window.FeederExporters = {
