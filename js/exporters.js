@@ -8,6 +8,9 @@
       Current: feeder.current,
       "Conductor Size": feeder.conductorSize,
       "Bonding Conductor": feeder.bonding,
+      Length: feeder.length,
+      "Install Method": feeder.installMethod,
+      Insulation: feeder.insulation,
       "Voltage Drop %": feeder.voltageDropPct,
       Status: feeder.status
     }));
@@ -24,7 +27,7 @@
 
     doc.autoTable({
       startY: 24,
-      head: [["Feeder ID", "From", "To", "V", "A", "Conductor Size", "Bonding", "VD %", "Status"]],
+      head: [["Feeder ID", "From", "To", "V", "A", "Conductor Size", "Bonding", "Length", "Install", "Insul.", "VD %", "Status"]],
       body: rows.map((r) => [
         r["Feeder ID"],
         r.From,
@@ -33,6 +36,9 @@
         r.Current,
         r["Conductor Size"],
         r["Bonding Conductor"],
+        r.Length,
+        r["Install Method"],
+        r.Insulation,
         r["Voltage Drop %"],
         r.Status
       ]),

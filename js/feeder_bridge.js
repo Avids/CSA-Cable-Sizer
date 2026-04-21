@@ -110,11 +110,21 @@
       current: form.circuit.current_a,
       conductorSize: results.recommended_size_display,
       bonding: bondingText,
+      length: `${form.circuit.run_length_m} ${form.circuit.run_length_unit || "m"}`,
+      installMethod: formatInstallMethod(form.installation.type),
+      insulation: `${form.conductors.insulation_rating_c}°C`,
       voltageDropPct: Number(results.voltage_drop_pct).toFixed(2),
       status: results.status,
       calcForm: JSON.parse(JSON.stringify(form)),
       calcResults: JSON.parse(JSON.stringify(results))
     };
+  }
+
+
+  function formatInstallMethod(type) {
+    if (type === "raceway") return "Raceway";
+    if (type === "free_air") return "Free Air";
+    return "Cable";
   }
 
   function escapeHtml(text) {

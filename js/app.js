@@ -16,16 +16,35 @@
 
   const CONTEXT_KEY = "csaFeederEditorContext";
   const RESULT_KEY = "csaFeederDraftResult";
+  const PROJECT_STATE_KEY = "csaFeederProjectState";
 
   function init() {
+    hydrateState();
     bindEvents();
     consumeReturnedFeeder();
     renderAll();
   }
 
+  function hydrateState() {
+    const raw = localStorage.getItem(PROJECT_STATE_KEY);
+    if (!raw) return;
+
+    try {
+      const stored = JSON.parse(raw);
+      loadProject(stored);
+    } catch {
+      localStorage.removeItem(PROJECT_STATE_KEY);
+    }
+  }
+
+  function persistState() {
+    localStorage.setItem(PROJECT_STATE_KEY, JSON.stringify(getProjectData()));
+  }
+
   function bindEvents() {
     byId("project-name").addEventListener("input", (event) => {
       setProjectName(event.target.value);
+      persistState();
     });
 
     byId("btn-add-equipment").addEventListener("click", () => {
@@ -33,6 +52,7 @@
         addEquipment(byId("equipment-name").value);
         byId("equipment-name").value = "";
         renderEquipment(appState.equipment);
+        persistState();
         setStatus("Equipment added.");
       } catch (error) {
         setStatus(error.message, true);
@@ -56,6 +76,7 @@
           to: endpoint.to
         };
 
+        persistState();
         localStorage.setItem(CONTEXT_KEY, JSON.stringify(context));
         window.location.href = "cable-sizing.html";
       } catch (error) {
@@ -71,6 +92,7 @@
       if (Number.isInteger(removeIndex)) {
         removeFeeder(removeIndex);
         renderFeeders(appState.feeders);
+        persistState();
         setStatus("Feeder removed.");
         return;
       }
@@ -101,6 +123,7 @@
 
         try {
           loadProject(project);
+          persistState();
           renderAll();
           setStatus("Project loaded.");
         } catch (loadError) {
@@ -134,6 +157,7 @@
       renderAll();
       localStorage.removeItem(CONTEXT_KEY);
       localStorage.removeItem(RESULT_KEY);
+      localStorage.removeItem(PROJECT_STATE_KEY);
       setStatus("Project cleared.");
     });
   }
@@ -155,6 +179,7 @@
       form: feeder.calcForm || null
     };
 
+    persistState();
     localStorage.setItem(CONTEXT_KEY, JSON.stringify(context));
     window.location.href = "cable-sizing.html";
   }
@@ -169,6 +194,7 @@
       const payload = JSON.parse(raw);
       if (!payload || !payload.feeder) return;
       addOrUpdateFeeder(payload.feeder);
+      persistState();
       setStatus(payload.mode === "edit" ? "Feeder updated from cable sizing page." : "Feeder added from cable sizing page.");
     } catch (error) {
       setStatus("Returned feeder data is invalid.", true);

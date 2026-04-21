@@ -48,6 +48,9 @@
         <td>${escapeHtml(feeder.current)}</td>
         <td>${escapeHtml(feeder.conductorSize)}</td>
         <td>${escapeHtml(feeder.bonding)}</td>
+        <td>${escapeHtml(feeder.length)}</td>
+        <td>${escapeHtml(feeder.installMethod)}</td>
+        <td>${escapeHtml(feeder.insulation)}</td>
         <td>${escapeHtml(feeder.voltageDropPct)}</td>
         <td>${escapeHtml(feeder.status)}</td>
         <td>
