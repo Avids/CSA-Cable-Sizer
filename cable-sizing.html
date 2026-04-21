@@ -24,8 +24,9 @@
             <label>Circuit Configuration <span class="required">*</span></label>
             <select id="circuit_type" name="circuit_type" required>
               <option value="">— Select —</option>
-              <option value="single_phase">Single phase</option>
-              <option value="three_phase" selected>Three phase</option>
+              <option value="single_phase_2w">1Φ/2W</option>
+              <option value="three_phase_3w">3Φ/3W</option>
+              <option value="three_phase_4w" selected>3Φ/4W</option>
             </select>
             <div class="field-hint">
               Select how the load is connected. This determines the voltage-drop factor (CSA Table D3).
@@ -213,6 +214,18 @@
           <!-- CONDITIONAL: IF RACEWAY -->
           <div id="raceway-details" class="hidden">
             <div class="form-group">
+              <label>Raceway Type</label>
+              <select id="raceway_type" name="raceway_type">
+                <option value="EMT" selected>EMT</option>
+                <option value="RNC (e.g., PVC, HDPE)">RNC (e.g., PVC, HDPE)</option>
+                <option value="GRC">GRC</option>
+                <option value="Flexible Metal Conduit (FMC)">Flexible Metal Conduit (FMC)</option>
+                <option value="LT Flexible Metal Conduit (LFMC)">LT Flexible Metal Conduit (LFMC)</option>
+                <option value="ENT">ENT</option>
+              </select>
+              <div class="field-hint">Record only. Raceway type has no impact on cable sizing calculations.</div>
+            </div>
+            <div class="form-group">
               <label>Total Conductors in Raceway <span class="required">*</span>
                 <span class="info-icon" title="Total number including all phases and current carrying neutral (single-phase or unbalanced 3-phase load). (Table 5C).">?</span>
               </label>
@@ -293,7 +306,7 @@
       initializeForm() {
         return {
           circuit: {
-            type: "three_phase",
+            type: "three_phase_4w",
             voltage_v: 600,
             current_a: 200,
             run_length_m: 300,
@@ -312,7 +325,7 @@
           },
           installation: {
             type: "cable",
-            raceway: { conductors_in_run: 3 }
+            raceway: { conductors_in_run: 3, type: "EMT" }
           },
           conductors: {
             material: "copper",
@@ -428,6 +441,7 @@
           "num_parallels": ["conductors", "parallel_sets"],
           "installation_type": ["installation", "type"],
           "conductors_in_run": ["installation", "raceway", "conductors_in_run"],
+          "raceway_type": ["installation", "raceway", "type"],
           "ampacity_col": ["code_basis", "ampacity_col_c"],
           "calculation_notes": ["code_basis", "calculation_notes"]
         };
@@ -478,6 +492,7 @@
           num_parallels: this.form.conductors.parallel_sets,
           installation_type: this.form.installation.type,
           conductors_in_run: this.form.installation.raceway.conductors_in_run,
+          raceway_type: this.form.installation.raceway.type || "EMT",
           ampacity_col: this.form.code_basis.ampacity_col_c,
           calculation_notes: this.form.code_basis.calculation_notes
         };
@@ -565,6 +580,27 @@
         return { "0": "1/0", "00": "2/0", "000": "3/0", "0000": "4/0" }[size] || size;
       }
 
+      getCircuitConfigMeta() {
+        const configMap = {
+          single_phase_2w: { label: "1Φ/2W", phaseConductors: 2, factorF: 2 },
+          three_phase_3w: { label: "3Φ/3W", phaseConductors: 3, factorF: 1.73 },
+          three_phase_4w: { label: "3Φ/4W", phaseConductors: 4, factorF: 1.73 }
+        };
+        return configMap[this.form.circuit.type] || configMap.three_phase_4w;
+      }
+
+      normalizeBondingWireSize(wireSize) {
+        if (!wireSize) return "N/A";
+        return `#${String(wireSize).replace(/\s*AWG$/i, "").trim()}`;
+      }
+
+      getCableConfigurationString(sizeDisplay, bondingWireSize) {
+        const parallelSets = Math.max(1, Math.floor(this.form.conductors.parallel_sets || 1));
+        const phaseConductors = this.getCircuitConfigMeta().phaseConductors;
+        const bondingDisplay = bondingWireSize === "G" ? "G" : `#${bondingWireSize}`;
+        return `${parallelSets}(${phaseConductors}#${sizeDisplay}+${bondingDisplay})`;
+      }
+
       calculate() {
         console.log("Calculate called with form data:", this.form);
 
@@ -576,7 +612,8 @@
         const runLengthM = this.form.circuit.run_length_unit === "ft"
           ? this.form.circuit.run_length_m * 0.3048
           : this.form.circuit.run_length_m;
-        const connectionFactor = this.form.circuit.type === "three_phase" ? 1.73 : 2;
+        const circuitConfigMeta = this.getCircuitConfigMeta();
+        const connectionFactor = circuitConfigMeta.factorF;
         const maxVoltageDropPct = this.form.circuit.max_voltage_drop_pct;
         const correctionFactor = getCorrectionFactorFromTable(
           this.form.system.ambient_temp_c,
@@ -644,11 +681,18 @@
         }
 
         const displaySize = this.awgDisplayFromAmpacitySize(selected.size);
+        const bonding = getBondingFromTable16ByOcp(this.form.system.ocp_rating_a, material);
+        const bondingWireSize = bonding.applicable
+          ? this.normalizeBondingWireSize(bonding.wireSize).replace(/^#/, "")
+          : "G";
+        const cableConfiguration = this.getCableConfigurationString(displaySize, bondingWireSize);
 
         this.results = {
           csa_table_ref: document.getElementById("csa_table_ref").value,
           recommended_size_awg: `${displaySize} AWG`,
           recommended_size_display: `${parallelSets} × ${displaySize} AWG per phase`,
+          cable_configuration: cableConfiguration,
+          circuit_configuration: circuitConfigMeta.label,
           parallel_sets: parallelSets,
           current_per_set_a: currentPerSet,
           ampacity_base: selected.ampacityBase,
@@ -661,7 +705,7 @@
           voltage_drop_factor_f: connectionFactor,
           voltage_drop_v: selected.voltageDropV,
           voltage_drop_pct: selected.voltageDropPct,
-          bonding: getBondingFromTable16ByOcp(this.form.system.ocp_rating_a, material),
+          bonding,
           status: selected.voltageDropPct <= maxVoltageDropPct ? "PASS" : "FAIL"
         };
       }
@@ -674,6 +718,10 @@
           <div class="result-row">
             <div class="result-label">MINIMUM SIZE</div>
             <div class="result-value success">${this.results.recommended_size_display}</div>
+          </div>
+          <div class="result-row">
+            <div class="result-label">Cable Configuration</div>
+            <div class="result-value">${this.results.cable_configuration}</div>
           </div>
           <div class="result-row">
             <div class="result-label">Available Ampacity</div>
@@ -722,7 +770,7 @@
       formatInstallationDetails() {
         const installationType = this.form.installation.type;
         if (installationType === "raceway") {
-          return `Conductors in run: ${this.form.installation.raceway.conductors_in_run || "N/A"}`;
+          return this.form.installation.raceway.type || "EMT";
         }
         return "No additional installation selections required.";
       }
@@ -746,6 +794,18 @@
         return shortLabelMap[this.form.installation.type] || this.form.installation.type;
       }
 
+      getCircuitConfigurationLabel() {
+        return this.getCircuitConfigMeta().label;
+      }
+
+      getSelectedSizeDescription() {
+        const baseSelection = `${this.results.recommended_size_display}, ${this.getConductorTypeText()}, ${this.getInstallationTypeShortText()}`;
+        if (this.form.installation.type === "raceway") {
+          return `${baseSelection}, ${this.form.installation.raceway.type || "EMT"}`;
+        }
+        return baseSelection;
+      }
+
       generatePdfReportHtml() {
         const now = new Date();
         const runLengthM = this.form.circuit.run_length_unit === "ft"
@@ -756,7 +816,7 @@
           `CSA ${this.form.code_basis.csa_standard} tables used (${this.results.csa_table_ref}, Table 5A, Table D3).`,
           `Continuous load assumed at ${this.form.circuit.current_a} A with power factor ${this.form.circuit.power_factor}.`,
           `CSA Rule 8-104 OCP loading factor ${this.results.ocp_loading_factor.toFixed(2)} (${this.form.system.ocp_rating_type}%) applied to determine required conductor ampacity.`,
-          `Connection factor f = ${this.results.voltage_drop_factor_f} based on ${this.form.circuit.type === "three_phase" ? "three-phase" : "single-phase"} circuit.`,
+          `Connection factor f = ${this.results.voltage_drop_factor_f} based on ${this.getCircuitConfigurationLabel()} circuit.`,
           `Ambient correction factor ${this.results.correction_factor.toFixed(3)} applied to base ampacity.`,
           this.form.installation.type === "free_air"
             ? "Free-air installation uses cable-equivalent K value approximation from Table D3."
@@ -807,8 +867,8 @@
     </colgroup>
     <tr><th>From</th><td>${this.form.system.from || "N/A"}</td><th>To</th><td>${this.form.system.to || "N/A"}</td></tr>
     <tr><th>Project Name</th><td colspan="3">${this.form.system.project_name || "N/A"}</td></tr>
-    <tr><th>Circuit</th><td>${this.form.circuit.type === "three_phase" ? "Three phase" : "Single phase"}</td><th>Source Voltage</th><td>${this.form.circuit.voltage_v} V</td></tr>
-    <tr><th>Current at end of cable run (Amps)</th><td>${this.form.circuit.current_a} A</td><th>Run Length</th><td>${this.form.circuit.run_length_m} ${this.form.circuit.run_length_unit} (${runLengthM.toFixed(2)} m)</td></tr>
+    <tr><th>Circuit</th><td>${this.getCircuitConfigurationLabel()}</td><th>Source Voltage</th><td>${this.form.circuit.voltage_v} V</td></tr>
+    <tr><th>Current at end of cable run</th><td>${this.form.circuit.current_a} A</td><th>Run Length</th><td>${this.form.circuit.run_length_m} ${this.form.circuit.run_length_unit} (${runLengthM.toFixed(2)} m)</td></tr>
     <tr><th>Max Voltage Drop</th><td>${this.form.circuit.max_voltage_drop_pct}%</td><th>Power Factor</th><td>${this.form.circuit.power_factor}</td></tr>
     <tr><th>Conductor</th><td>${this.form.conductors.material}, ${this.form.conductors.quantity} conductors, ${this.form.conductors.parallel_sets} parallel set(s)</td><th>Conductor Insulation Rating</th><td>${this.getInsulationRatingText()}</td></tr>
     <tr><th>Ambient</th><td>${this.form.system.ambient_temp_c}°C</td><th>Installation</th><td>${this.form.installation.type} (${this.formatInstallationDetails()})</td></tr>
@@ -828,7 +888,8 @@
     <tr><th>Available Ampacity</th><td>${this.results.ampacity_available_a.toFixed(1)} A total (${this.results.ampacity_available_per_set_a.toFixed(1)} A per set × ${this.results.parallel_sets})</td></tr>
     <tr><th>Required Ampacity (CSA 8-104)</th><td>${this.results.required_ampacity_a.toFixed(1)} A (Load ${this.form.circuit.current_a} A ÷ ${this.results.ocp_loading_factor.toFixed(2)})</td></tr>
     <tr><th>Ampacity Margin</th><td>${requiredAmpacityMargin.toFixed(1)} A vs required ampacity</td></tr>
-    <tr><th>Selected Size</th><td><strong>${this.results.recommended_size_display}, ${this.getConductorTypeText()}, ${this.getInstallationTypeShortText()}</strong></td></tr>
+    <tr><th>Selected Size</th><td><strong>${this.getSelectedSizeDescription()}</strong></td></tr>
+    <tr><th>Cable Configuration</th><td>${this.results.cable_configuration}</td></tr>
   </table>
 
   <h2>3) Voltage Drop Calculation</h2>
