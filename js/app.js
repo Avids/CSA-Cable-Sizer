@@ -88,8 +88,10 @@
       const target = event.target;
       if (!(target instanceof HTMLButtonElement)) return;
 
-      const removeIndex = Number(target.getAttribute("data-remove-index"));
-      if (Number.isInteger(removeIndex)) {
+      const removeAttr = target.getAttribute("data-remove-index");
+      if (removeAttr !== null) {
+        const removeIndex = Number(removeAttr);
+        if (!Number.isInteger(removeIndex)) return;
         removeFeeder(removeIndex);
         renderFeeders(appState.feeders);
         persistState();
@@ -97,8 +99,10 @@
         return;
       }
 
-      const editIndex = Number(target.getAttribute("data-edit-index"));
-      if (Number.isInteger(editIndex)) {
+      const editAttr = target.getAttribute("data-edit-index");
+      if (editAttr !== null) {
+        const editIndex = Number(editAttr);
+        if (!Number.isInteger(editIndex)) return;
         openEditMode(editIndex);
       }
     });
