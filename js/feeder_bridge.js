@@ -108,6 +108,7 @@
       to: form.system.to,
       voltage: form.circuit.voltage_v,
       current: form.circuit.current_a,
+      circuitConfiguration: results.circuit_configuration || mapCircuitConfiguration(form.circuit.type),
       conductorSize: results.recommended_size_display,
       bonding: bondingText,
       length: `${form.circuit.run_length_m} ${form.circuit.run_length_unit || "m"}`,
@@ -125,6 +126,12 @@
     if (type === "raceway") return "Raceway";
     if (type === "free_air") return "Free Air";
     return "Cable";
+  }
+
+  function mapCircuitConfiguration(type) {
+    if (type === "single_phase_2w") return "1Φ/2W";
+    if (type === "three_phase_3w") return "3Φ/3W";
+    return "3Φ/4W";
   }
 
   function escapeHtml(text) {

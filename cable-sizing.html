@@ -597,7 +597,8 @@
       getCableConfigurationString(sizeDisplay, bondingWireSize) {
         const parallelSets = Math.max(1, Math.floor(this.form.conductors.parallel_sets || 1));
         const phaseConductors = this.getCircuitConfigMeta().phaseConductors;
-        return `${parallelSets}(${phaseConductors}#${sizeDisplay}+#${bondingWireSize})`;
+        const bondingDisplay = bondingWireSize === "G" ? "G" : `#${bondingWireSize}`;
+        return `${parallelSets}(${phaseConductors}#${sizeDisplay}+${bondingDisplay})`;
       }
 
       calculate() {
@@ -683,7 +684,7 @@
         const bonding = getBondingFromTable16ByOcp(this.form.system.ocp_rating_a, material);
         const bondingWireSize = bonding.applicable
           ? this.normalizeBondingWireSize(bonding.wireSize).replace(/^#/, "")
-          : "N/A";
+          : "G";
         const cableConfiguration = this.getCableConfigurationString(displaySize, bondingWireSize);
 
         this.results = {
@@ -769,8 +770,7 @@
       formatInstallationDetails() {
         const installationType = this.form.installation.type;
         if (installationType === "raceway") {
-          const racewayType = this.form.installation.raceway.type || "EMT";
-          return `Raceway type: ${racewayType}; Conductors in run: ${this.form.installation.raceway.conductors_in_run || "N/A"}`;
+          return this.form.installation.raceway.type || "EMT";
         }
         return "No additional installation selections required.";
       }
@@ -796,6 +796,14 @@
 
       getCircuitConfigurationLabel() {
         return this.getCircuitConfigMeta().label;
+      }
+
+      getSelectedSizeDescription() {
+        const baseSelection = `${this.results.recommended_size_display}, ${this.getConductorTypeText()}, ${this.getInstallationTypeShortText()}`;
+        if (this.form.installation.type === "raceway") {
+          return `${baseSelection}, ${this.form.installation.raceway.type || "EMT"}`;
+        }
+        return baseSelection;
       }
 
       generatePdfReportHtml() {
@@ -860,7 +868,7 @@
     <tr><th>From</th><td>${this.form.system.from || "N/A"}</td><th>To</th><td>${this.form.system.to || "N/A"}</td></tr>
     <tr><th>Project Name</th><td colspan="3">${this.form.system.project_name || "N/A"}</td></tr>
     <tr><th>Circuit</th><td>${this.getCircuitConfigurationLabel()}</td><th>Source Voltage</th><td>${this.form.circuit.voltage_v} V</td></tr>
-    <tr><th>Current at end of cable run (Amps)</th><td>${this.form.circuit.current_a} A</td><th>Run Length</th><td>${this.form.circuit.run_length_m} ${this.form.circuit.run_length_unit} (${runLengthM.toFixed(2)} m)</td></tr>
+    <tr><th>Current at end of cable run</th><td>${this.form.circuit.current_a} A</td><th>Run Length</th><td>${this.form.circuit.run_length_m} ${this.form.circuit.run_length_unit} (${runLengthM.toFixed(2)} m)</td></tr>
     <tr><th>Max Voltage Drop</th><td>${this.form.circuit.max_voltage_drop_pct}%</td><th>Power Factor</th><td>${this.form.circuit.power_factor}</td></tr>
     <tr><th>Conductor</th><td>${this.form.conductors.material}, ${this.form.conductors.quantity} conductors, ${this.form.conductors.parallel_sets} parallel set(s)</td><th>Conductor Insulation Rating</th><td>${this.getInsulationRatingText()}</td></tr>
     <tr><th>Ambient</th><td>${this.form.system.ambient_temp_c}°C</td><th>Installation</th><td>${this.form.installation.type} (${this.formatInstallationDetails()})</td></tr>
@@ -880,7 +888,7 @@
     <tr><th>Available Ampacity</th><td>${this.results.ampacity_available_a.toFixed(1)} A total (${this.results.ampacity_available_per_set_a.toFixed(1)} A per set × ${this.results.parallel_sets})</td></tr>
     <tr><th>Required Ampacity (CSA 8-104)</th><td>${this.results.required_ampacity_a.toFixed(1)} A (Load ${this.form.circuit.current_a} A ÷ ${this.results.ocp_loading_factor.toFixed(2)})</td></tr>
     <tr><th>Ampacity Margin</th><td>${requiredAmpacityMargin.toFixed(1)} A vs required ampacity</td></tr>
-    <tr><th>Selected Size</th><td><strong>${this.results.recommended_size_display}, ${this.getConductorTypeText()}, ${this.getInstallationTypeShortText()}</strong></td></tr>
+    <tr><th>Selected Size</th><td><strong>${this.getSelectedSizeDescription()}</strong></td></tr>
     <tr><th>Cable Configuration</th><td>${this.results.cable_configuration}</td></tr>
   </table>
 

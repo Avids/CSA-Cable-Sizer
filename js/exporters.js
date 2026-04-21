@@ -6,6 +6,7 @@
       To: feeder.to,
       Voltage: feeder.voltage,
       Current: feeder.current,
+      "Circuit Configuration": feeder.circuitConfiguration || "",
       "Conductor Size": feeder.conductorSize,
       "Bonding Conductor": feeder.bonding,
       Length: feeder.length,
@@ -27,13 +28,14 @@
 
     doc.autoTable({
       startY: 24,
-      head: [["Feeder ID", "From", "To", "V", "A", "Conductor Size", "Bonding", "Length", "Install", "Insul.", "VD %", "Status"]],
+      head: [["Feeder ID", "From", "To", "V", "A", "Circuit Config", "Conductor Size", "Bonding", "Length", "Install", "Insul.", "VD %", "Status"]],
       body: rows.map((r) => [
         r["Feeder ID"],
         r.From,
         r.To,
         r.Voltage,
         r.Current,
+        r["Circuit Configuration"],
         r["Conductor Size"],
         r["Bonding Conductor"],
         r.Length,

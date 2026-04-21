@@ -46,6 +46,7 @@
         <td>${escapeHtml(feeder.to)}</td>
         <td>${escapeHtml(feeder.voltage)}</td>
         <td>${escapeHtml(feeder.current)}</td>
+        <td>${escapeHtml(feeder.circuitConfiguration || "—")}</td>
         <td>${escapeHtml(feeder.conductorSize)}</td>
         <td>${escapeHtml(feeder.bonding)}</td>
         <td>${escapeHtml(feeder.length)}</td>
